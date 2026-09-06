@@ -574,8 +574,39 @@ const CROP_HANDLES = [['nw', 0, 0], ['ne', 1, 0], ['sw', 0, 1], ['se', 1, 1]];
 
 function CropOverlay({ src, busy, onCancel, onApply }) {
   const imgRef = useRef(null);
+  const wrapRef = useRef(null);
   const [rect, setRect] = useState(null);
+  // 画面の大きさ。これを基に写真の表示上限を決める（100vh はスマホで実際の高さとずれる）
+  const [view, setView] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  // 実際に表示されている写真の位置と大きさ。選択の枠はこれに合わせて描く。
+  const [box, setBox] = useState(null);
   const drag = useRef(null);
+
+  // 枠の位置と、切り取る位置がずれないように、写真の実寸をその都度測る
+  function measure() {
+    const img = imgRef.current;
+    const wrap = wrapRef.current;
+    if (!img || !wrap || !img.naturalWidth) return;
+    const a = img.getBoundingClientRect();
+    const b = wrap.getBoundingClientRect();
+    const next = { left: a.left - b.left, top: a.top - b.top, w: a.width, h: a.height };
+    setBox(prev => (prev
+      && Math.abs(prev.left - next.left) < 0.5 && Math.abs(prev.top - next.top) < 0.5
+      && Math.abs(prev.w - next.w) < 0.5 && Math.abs(prev.h - next.h) < 0.5) ? prev : next);
+  }
+
+  useEffect(() => {
+    measure();
+    const onResize = () => setView({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, [src]);
+
+  useEffect(() => { measure(); }, [view.w, view.h, src]);
 
   function point(e) {
     const b = imgRef.current.getBoundingClientRect();
@@ -628,19 +659,30 @@ function CropOverlay({ src, busy, onCancel, onApply }) {
   const dragProps = mode => ({
     onPointerDown: e => start(e, mode), onPointerMove: move, onPointerUp: end, onPointerCancel: end,
   });
+  // 下の操作バーで隠れないように、写真の高さに余白を残す
+  const BAR_ROOM = 96;
 
   return h(React.Fragment, null,
     h('div', {
+      ref: wrapRef,
       onClick: e => e.stopPropagation(),
-      style: { position: 'relative', maxWidth: '100%', maxHeight: '100%', lineHeight: 0 },
+      style: { position: 'relative', lineHeight: 0, marginBottom: `${BAR_ROOM - 32}px` },
     },
       h('img', {
-        ref: imgRef, src, draggable: false,
-        style: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', userSelect: 'none' },
+        ref: imgRef, src, draggable: false, onLoad: measure,
+        style: {
+          display: 'block', userSelect: 'none',
+          maxWidth: `${Math.max(80, view.w - 32)}px`,
+          maxHeight: `${Math.max(80, view.h - BAR_ROOM - 32)}px`,
+        },
       }),
-      h('div', {
+      box && h('div', {
         ...dragProps('new'),
-        style: { position: 'absolute', inset: 0, overflow: 'hidden', cursor: 'crosshair', touchAction: 'none' },
+        style: {
+          position: 'absolute', left: `${box.left}px`, top: `${box.top}px`,
+          width: `${box.w}px`, height: `${box.h}px`,
+          overflow: 'hidden', cursor: 'crosshair', touchAction: 'none',
+        },
       },
         rect && rect.w > 0 && rect.h > 0 && h('div', {
           ...dragProps('move'),
