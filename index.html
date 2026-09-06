@@ -417,6 +417,49 @@ async function copyPhotos(fromIds) {
   return newIds;
 }
 
+// 画像を読み込んで <img> にする（トリミングで元の画素数を使うため）
+function loadImageEl(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('画像を読み込めませんでした'));
+    img.src = src;
+  });
+}
+
+// canvas を長辺 maxDim まで縮めて JPEG のデータURLにする
+function canvasToDataURL(source, maxDim, quality) {
+  const scale = Math.min(1, maxDim / Math.max(source.width, source.height));
+  const w = Math.max(1, Math.round(source.width * scale));
+  const hh = Math.max(1, Math.round(source.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = hh;
+  canvas.getContext('2d').drawImage(source, 0, 0, w, hh);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
+// 指定した範囲（表示中の画像に対する0〜1の割合）だけを切り出し、別の写真として保存する。
+// 元の画像はそのまま残すので、付け替えを Ctrl+Z で戻せば元の写真に戻る。
+async function cropPhoto(pid, frac) {
+  const full = await loadPhoto(pid);
+  if (!full) throw new Error('写真が見つかりませんでした');
+  const img = await loadImageEl(full);
+  const sx = Math.round(frac.x * img.naturalWidth);
+  const sy = Math.round(frac.y * img.naturalHeight);
+  const sw = Math.max(1, Math.round(frac.w * img.naturalWidth));
+  const sh = Math.max(1, Math.round(frac.h * img.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = sw;
+  canvas.height = sh;
+  canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  const nid = newPhotoId();
+  const out = canvasToDataURL(canvas, 1600, 0.85);
+  const thumb = canvasToDataURL(canvas, 160, 0.7);
+  await photoTx('readwrite', st => { st.put(out, nid); return st.put(thumb, nid + THUMB_SUFFIX); });
+  return nid;
+}
+
 // まとめて貼られた写真を、写真がまだ無い問題に上から順に割り当てる
 async function assignPhotos(questionIds, photos, files, setData) {
   const targets = [];
@@ -524,9 +567,132 @@ function useWindowPaste(active, handler) {
   }, [active]);
 }
 
+// ── 写真のトリミング（拡大表示の中で使う）─────────────────────────────────────
+// 選択範囲は「表示中の画像に対する割合」で持つ。画面の大きさが変わっても同じ場所を指す。
+const MIN_CROP = 0.03;   // これより細い選択は切り取らせない
+const CROP_HANDLES = [['nw', 0, 0], ['ne', 1, 0], ['sw', 0, 1], ['se', 1, 1]];
+
+function CropOverlay({ src, busy, onCancel, onApply }) {
+  const imgRef = useRef(null);
+  const [rect, setRect] = useState(null);
+  const drag = useRef(null);
+
+  function point(e) {
+    const b = imgRef.current.getBoundingClientRect();
+    const clamp = v => Math.min(1, Math.max(0, v));
+    return { x: clamp((e.clientX - b.left) / b.width), y: clamp((e.clientY - b.top) / b.height) };
+  }
+
+  const norm = (x1, y1, x2, y2) =>
+    ({ x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1) });
+
+  function start(e, mode) {
+    if (busy) return;
+    e.preventDefault();
+    e.stopPropagation();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    const p = point(e);
+    drag.current = { mode, origin: p, base: rect };
+    if (mode === 'new') setRect({ x: p.x, y: p.y, w: 0, h: 0 });
+  }
+
+  function move(e) {
+    const d = drag.current;
+    if (!d) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const p = point(e);
+    if (d.mode === 'new') {
+      setRect(norm(d.origin.x, d.origin.y, p.x, p.y));
+    } else if (d.mode === 'move' && d.base) {
+      const x = Math.min(1 - d.base.w, Math.max(0, d.base.x + (p.x - d.origin.x)));
+      const y = Math.min(1 - d.base.h, Math.max(0, d.base.y + (p.y - d.origin.y)));
+      setRect({ ...d.base, x, y });
+    } else if (d.base) {
+      // つまんだ角の反対側を固定して、指の位置まで広げる（裏返しても破綻しない）
+      const fx = d.mode === 'nw' || d.mode === 'sw' ? d.base.x + d.base.w : d.base.x;
+      const fy = d.mode === 'nw' || d.mode === 'ne' ? d.base.y + d.base.h : d.base.y;
+      setRect(norm(fx, fy, p.x, p.y));
+    }
+  }
+
+  function end(e) {
+    if (!drag.current) return;
+    e.stopPropagation();
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    drag.current = null;
+  }
+
+  const ready = !!rect && rect.w >= MIN_CROP && rect.h >= MIN_CROP;
+  const pct = v => `${v * 100}%`;
+  const dragProps = mode => ({
+    onPointerDown: e => start(e, mode), onPointerMove: move, onPointerUp: end, onPointerCancel: end,
+  });
+
+  return h(React.Fragment, null,
+    h('div', {
+      onClick: e => e.stopPropagation(),
+      style: { position: 'relative', maxWidth: '100%', maxHeight: '100%', lineHeight: 0 },
+    },
+      h('img', {
+        ref: imgRef, src, draggable: false,
+        style: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', userSelect: 'none' },
+      }),
+      h('div', {
+        ...dragProps('new'),
+        style: { position: 'absolute', inset: 0, overflow: 'hidden', cursor: 'crosshair', touchAction: 'none' },
+      },
+        rect && rect.w > 0 && rect.h > 0 && h('div', {
+          ...dragProps('move'),
+          style: {
+            position: 'absolute', left: pct(rect.x), top: pct(rect.y), width: pct(rect.w), height: pct(rect.h),
+            border: '2px solid #fff', boxShadow: '0 0 0 9999px rgba(0,0,0,.6)',
+            cursor: 'move', touchAction: 'none',
+          },
+        },
+          CROP_HANDLES.map(([m, hx, hy]) => h('div', {
+            key: m, ...dragProps(m),
+            style: {
+              position: 'absolute', left: hx ? '100%' : 0, top: hy ? '100%' : 0,
+              transform: 'translate(-50%, -50%)', width: '22px', height: '22px', borderRadius: '4px',
+              background: '#fff', border: '1px solid #111', touchAction: 'none', cursor: `${m}-resize`,
+            },
+          }))
+        )
+      )
+    ),
+
+    h('div', {
+      onClick: e => e.stopPropagation(),
+      style: {
+        position: 'absolute', bottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
+        justifyContent: 'center', maxWidth: 'calc(100% - 32px)',
+        background: 'rgba(17,24,39,.9)', border: '1px solid #374151', borderRadius: '8px', padding: '8px 12px',
+      },
+    },
+      h('span', { className: 'text-xs text-gray-300' },
+        busy ? '切り取っています…'
+          : ready ? '四隅をつまむと調整できます。中をドラッグすると位置を動かせます'
+          : '残したい部分をドラッグで囲んでください'),
+      h('button', {
+        onClick: () => ready && !busy && onApply(rect), disabled: !ready || !!busy,
+        className: `text-xs px-3 py-1.5 rounded-lg border ${ready && !busy
+          ? 'bg-green-800 border-green-600 text-green-100'
+          : 'bg-gray-900/80 border-gray-700 text-gray-500 cursor-not-allowed'}`,
+      }, '✂️ 切り取る'),
+      h('button', {
+        onClick: onCancel, disabled: !!busy,
+        className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-900/80 border border-gray-600 text-gray-200',
+      }, 'やめる')
+    )
+  );
+}
+
 // ── 写真モーダル（画面中央に表示。複数枚は送り送りで見る）─────────────────────
-function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, currentNo, currentText, onMove }) {
+function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, currentNo, currentText, onMove, onCrop }) {
   const [src, setSrc] = useState(null);
+  const [cropping, setCropping] = useState(false);
+  const [cropBusy, setCropBusy] = useState(false);
   const pid = ids[index];
   // 移動先は「ひとつ前の問題」を初期値にする（問題の次に解答が来る問題集で使いやすい）
   const defaultTarget = (moveTargets && moveTargets.length)
@@ -539,19 +705,30 @@ function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, curre
     let alive = true;
     setSrc(null);
     if (!pid) { setSrc(''); return; }
+    setCropping(false);
+    setCropBusy(false);
     loadPhoto(pid).then(v => { if (alive) setSrc(v || ''); }).catch(() => { if (alive) setSrc(''); });
     return () => { alive = false; };
   }, [pid]);
 
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') { if (cropping) setCropping(false); else onClose(); }
+      if (cropping) return;
       if (e.key === 'ArrowLeft' && index > 0) onIndex(index - 1);
       if (e.key === 'ArrowRight' && index < ids.length - 1) onIndex(index + 1);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, onIndex, index, ids.length]);
+  }, [onClose, onIndex, index, ids.length, cropping]);
+
+  function applyCrop(frac) {
+    setCropBusy(true);
+    Promise.resolve(onCrop(pid, frac))
+      .then(() => { setCropping(false); })
+      .catch(() => {})
+      .then(() => setCropBusy(false));
+  }
 
   const navBtn = {
     width: '44px', height: '44px', borderRadius: '50%', fontSize: '20px', lineHeight: 1,
@@ -564,7 +741,7 @@ function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, curre
     style: { zIndex: 60 },
     className: 'fixed inset-0 bg-black/85 flex items-center justify-center p-4'
   },
-    ids.length > 1 && h('button', {
+    ids.length > 1 && !cropping && h('button', {
       onClick: e => { e.stopPropagation(); onIndex(index - 1); },
       disabled: index === 0,
       style: { ...navBtn, position: 'absolute', left: '16px', opacity: index === 0 ? 0.3 : 1 },
@@ -572,6 +749,8 @@ function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, curre
 
     src === null
       ? h('p', { className: 'text-sm text-gray-400' }, '読み込み中…')
+      : src && cropping
+        ? h(CropOverlay, { src, busy: cropBusy, onCancel: () => setCropping(false), onApply: applyCrop })
       : src
         ? h('img', {
             src,
@@ -581,16 +760,17 @@ function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, curre
           })
         : h('p', { className: 'text-sm text-gray-400' }, '写真がありません'),
 
-    ids.length > 1 && h('button', {
+    ids.length > 1 && !cropping && h('button', {
       onClick: e => { e.stopPropagation(); onIndex(index + 1); },
       disabled: index >= ids.length - 1,
       style: { ...navBtn, position: 'absolute', right: '16px', opacity: index >= ids.length - 1 ? 0.3 : 1 },
     }, '›'),
 
-    h('div', {
+    !cropping && h('div', {
       onClick: e => e.stopPropagation(),
       style: {
-        position: 'absolute', bottom: '16px', display: 'flex', alignItems: 'center', gap: '10px',
+        position: 'absolute', bottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
+        justifyContent: 'center', maxWidth: 'calc(100% - 32px)',
         background: 'rgba(17,24,39,.85)', border: '1px solid #374151', borderRadius: '8px', padding: '8px 12px',
       },
     },
@@ -607,6 +787,11 @@ function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, curre
         onClick: () => onMove(pid, moveTo),
         className: 'text-xs px-3 py-1.5 rounded-lg bg-green-800 border border-green-600 text-green-100',
       }, '移す'),
+      onCrop && src && h('button', {
+        onClick: () => setCropping(true),
+        className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-900/80 border border-gray-600 text-gray-100',
+        title: '要る部分だけを切り出す（Ctrl+Z で戻せます）',
+      }, '✂️ トリミング'),
       onDelete && h('button', {
         onClick: () => onDelete(pid),
         className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-900/80 border border-red-800 text-red-300',
@@ -2025,6 +2210,14 @@ function App() {
           });
           setPhotoView(null);
         },
+        // 切り取った画像は別の写真として保存し、付け替えだけを記録する。
+        // 元の画像は残るので Ctrl+Z で元の写真に戻せる。
+        onCrop: (pid, frac) => cropPhoto(pid, frac).then(nid => {
+          setData(d => ({
+            ...d,
+            photos: { ...d.photos, [qid]: photoIdsOf(d.photos, qid).map(x => (x === pid ? nid : x)) },
+          }));
+        }),
         onDelete: pid => {
           detachPhoto(qid, pid, setData).then(() => {
             setPhotoView(v => {
