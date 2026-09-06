@@ -2237,6 +2237,15 @@ ReactDOM.createRoot(document.getElementById('root')).render(h(App));
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
+    // 新しい版に入れ替わったら一度だけ読み込み直す（更新に気付かず古い画面を使い続けないように）。
+    // 初回訪問でも controllerchange は起きるので、そのときは読み込み直さない。
+    var had = !!navigator.serviceWorker.controller;
+    var done = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!had || done) return;
+      done = true;
+      window.location.reload();
+    });
     navigator.serviceWorker.register('./sw.js').catch(function () {});
   });
 }
