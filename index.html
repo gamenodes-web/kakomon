@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#030712" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="基本情報対策" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="manifest.json" />
+<title>基本情報技術者試験 対策</title>
+<link rel="stylesheet" href="tw.css" />
+<script src="react.js"></script>
+<script src="react-dom.js"></script>
+<script src="jszip.js"></script>
+<style>
+  body { background: #030712; color: white; font-family: system-ui, sans-serif; -webkit-tap-highlight-color: transparent; padding-bottom: env(safe-area-inset-bottom); }
+  button { touch-action: manipulation; }
+  .pb-safe { padding-bottom: max(5rem, calc(5rem + env(safe-area-inset-bottom))); }
+
+  /* ── Excel風のシート表示（PC向け）───────────────────────────────── */
+  .xl-app { background:#f7f7f7; border:1px solid #8a8a8a; border-radius:4px; color:#1f2328; overflow:hidden; }
+  .xl-toolbar { background:#f7f7f7; border-bottom:1px solid #c8c8c8; padding:10px 12px; }
+  .xl-label { font-size:12px; color:#555; margin-bottom:3px; display:block; }
+  .xl-input, .xl-toolbar select, .xl-toolbar input {
+    border:1px solid #b0b0b0; background:#fff; color:#1f2328; font-size:13px;
+    padding:5px 8px; border-radius:2px; font-family:inherit;
+  }
+  .xl-input:focus, .xl-toolbar select:focus, .xl-toolbar input:focus { outline:2px solid #217346; outline-offset:-2px; }
+  .xl-btn {
+    background:#217346; color:#fff; border:1px solid #1b5e3a; font-size:13px; font-weight:600;
+    padding:6px 14px; border-radius:2px; cursor:pointer;
+  }
+  .xl-btn:hover { background:#1b5e3a; }
+  .xl-btn:disabled { background:#cfcfcf; border-color:#bdbdbd; color:#8a8a8a; cursor:not-allowed; }
+  .xl-btn-sub { background:#fff; color:#1f2328; border:1px solid #b0b0b0; font-weight:400; }
+  .xl-btn-sub:hover { background:#eaeaea; }
+  .xl-scroll { background:#fff; overflow:auto; max-height:62vh; }
+  .xl-table { border-collapse:separate; border-spacing:0; font-size:13px; color:#1f2328; white-space:nowrap; width:100%; }
+  /* URL列に余白を吸わせて、表を画面幅いっぱいに広げる */
+  .xl-col-url { width:100%; }
+  .xl-col-photo { min-width:170px; }
+  .xl-thumb, .xl-cell .xl-btn { flex:0 0 auto; }
+  .xl-table th, .xl-table td { border-right:1px solid #d9d9d9; border-bottom:1px solid #d9d9d9; }
+  .xl-table thead th {
+    position:sticky; top:0; z-index:2; background:#f2f2f2; color:#333; font-weight:600;
+    text-align:left; padding:6px 10px; border-bottom:1px solid #a6a6a6;
+  }
+  .xl-table tbody tr:hover td { background:#eaf3ff; }
+  .xl-rownum {
+    background:#f2f2f2; color:#666; text-align:center; width:46px; min-width:46px;
+    padding:5px 4px; border-right:1px solid #a6a6a6; position:sticky; left:0; z-index:1;
+  }
+  .xl-table tbody tr:hover .xl-rownum { background:#dbe9fb; }
+  .xl-cell { padding:5px 10px; }
+  .xl-grip { cursor:grab; user-select:none; }
+  .xl-grip:active { cursor:grabbing; }
+  .xl-grip .g { color:#b0b0b0; margin-right:3px; }
+  .xl-dragging td { opacity:.4; }
+  .xl-drop-before td { box-shadow:inset 0 2px 0 0 #217346; }
+  .xl-drop-after td { box-shadow:inset 0 -2px 0 0 #217346; }
+  .xl-link { color:#1155cc; text-decoration:none; }
+  .xl-link:hover { text-decoration:underline; }
+  .xl-url { flex:1 1 auto; min-width:0; border:1px solid transparent; background:transparent; font-family:inherit; font-size:13px; color:#1f2328; padding:3px 4px; border-radius:2px; }
+  .xl-url:hover { border-color:#c4c4c4; background:#fff; }
+  .xl-url:focus { outline:2px solid #217346; outline-offset:-2px; background:#fff; }
+  .xl-url::placeholder { color:#b0b0b0; }
+  .xl-select { border:1px solid transparent; background:transparent; font-size:13px; color:#1f2328; padding:3px 4px; border-radius:2px; font-family:inherit; }
+  .xl-select:hover { border-color:#c4c4c4; background:#fff; }
+  .xl-select:focus { outline:2px solid #217346; outline-offset:-2px; background:#fff; }
+  .xl-thumb { height:34px; width:auto; border:1px solid #c4c4c4; display:block; cursor:pointer; background:#fff; }
+  .xl-status { background:#f7f7f7; border-top:1px solid #c8c8c8; padding:6px 12px; font-size:12px; color:#555; }
+  .xl-msg { background:#fff7d6; border:1px solid #e0c96b; color:#6b5a12; font-size:12px; padding:6px 12px; }
+  .xl-drop { background:#fff; border:2px dashed #b0b0b0; border-radius:3px; padding:14px; text-align:center; font-size:12px; color:#555; }
+  .xl-drop.hot { border-color:#217346; background:#eef8f1; }
+  .xl-empty { padding:28px; text-align:center; color:#777; font-size:13px; background:#fff; }
+  .xl-target { background:#fff3cd; border:1px solid #e0c96b; font-size:12px; color:#6b5a12; padding:6px 12px; }
+
+  /* ── カレンダー（日付のマスに直接書き込む）───────────────────────────── */
+  .cal-table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; background:#fff; }
+  .cal-table th {
+    background:#f2f2f2; color:#333; font-weight:600; font-size:12px; padding:5px 8px;
+    border-right:1px solid #d9d9d9; border-bottom:1px solid #a6a6a6; text-align:left;
+  }
+  .cal-table td { border-right:1px solid #d9d9d9; border-bottom:1px solid #d9d9d9; padding:0; vertical-align:top; height:112px; }
+  .cal-out { background:#fafafa; }
+  .cal-day { font-size:12px; padding:3px 7px 1px; color:#555; display:flex; align-items:center; gap:5px; }
+  .cal-today .cal-day { background:#217346; color:#fff; font-weight:700; }
+  .cal-sun .cal-day { color:#c00000; }
+  .cal-sat .cal-day { color:#0070c0; }
+  .cal-today.cal-sun .cal-day, .cal-today.cal-sat .cal-day { color:#fff; }
+  .cal-memo {
+    display:block; width:100%; height:88px; border:0; outline:0; resize:none; background:transparent;
+    font-family:inherit; font-size:12px; line-height:1.5; color:#1f2328; padding:3px 7px 6px;
+  }
+  .cal-memo:focus { background:#fffbe6; }
+  .cal-memo::placeholder { color:#c8c8c8; }
+
+  /* ── スマホ（幅720pxまで）───────────────────────────────────────────── */
+  @media (max-width: 720px) {
+    .pc-only { display: none !important; }
+    .xl-app { border-radius: 0; border-left: 0; border-right: 0; }
+    .xl-pad { padding: 8px !important; }
+    .xl-toolbar { padding: 8px; gap: 8px !important; }
+    .xl-toolbar > div { flex: 1 1 44% !important; min-width: 0 !important; }
+    .xl-toolbar .xl-field-wide { flex: 1 1 100% !important; }
+    /* 16px未満だと iPhone で入力時に勝手に拡大される */
+    .xl-toolbar select, .xl-toolbar input, .xl-input {
+      width: 100% !important; min-width: 0 !important; font-size: 16px !important;
+    }
+    .xl-btn { padding: 10px 14px; font-size: 14px; }
+    .xl-toolbar .xl-btn { flex: 0 0 auto; }
+    .xl-msg, .xl-status, .xl-target { font-size: 12px; padding: 8px; }
+    .sticky button { white-space: nowrap; padding: 8px 10px; }
+
+    /* 問題はカードで縦に積む */
+    .q-card { border-bottom: 8px solid #eee; background: #fff; padding: 10px 12px; }
+    .q-card:last-child { border-bottom: 0; }
+    .q-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .q-no { font-weight: 700; font-size: 15px; color: #1f2328; }
+    .q-open {
+      display: block; text-align: center; background: #eef4ff; border: 1px solid #b6cdf5;
+      color: #1155cc; border-radius: 4px; padding: 12px; font-size: 15px; margin: 8px 0; text-decoration: none;
+    }
+    .q-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .q-row label { font-size: 13px; color: #555; }
+    .q-row select { font-size: 16px; padding: 8px; border: 1px solid #b0b0b0; border-radius: 3px; background: #fff; }
+    .q-photos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .q-photos .xl-thumb { height: 56px; }
+    .xl-scroll { max-height: none; }
+
+    /* カレンダーは日付を小さく、書き込みは下の欄で */
+    .cal-table td { height: 44px; }
+    .cal-table th { padding: 4px; text-align: center; }
+    .cal-day { justify-content: center; padding: 2px; }
+    .cal-memo { display: none; }
+    .cal-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #217346; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const { useState, useEffect, useRef, createElement: h } = React;
+
+// ── データ保存（文字データ: localStorage、画像: IndexedDB）─────────────────
+const STORAGE_KEY = 'feExamData';
+// 最初に開いたときの中身。送ってもらった単元マスタ（単元名・m・s・問題数）から
+// URLを組み立てて入れてある。単元管理タブで削除・追加・貼り替えができる。
+const SEED_UNITS = [
+  ['離散数学', 1, 1, 109],
+  ['応用数学', 1, 2, 51],
+  ['情報に関する理論', 1, 3, 42],
+  ['通信に関する理論', 1, 4, 13],
+  ['計測・制御に関する理論', 1, 5, 11],
+];
+const SEED_THEME = { id: 'tseed', name: '基本情報技術者試験' };
+function seedUnits() {
+  return SEED_UNITS.map(([name, m, s, count], i) => ({
+    id: `seed${i + 1}`,
+    themeId: SEED_THEME.id,
+    name,
+    questions: Array.from({ length: count }, (_, n) => {
+      const url = `https://www.fe-siken.com/bunya.php?m=${m}&s=${s}&no=${n + 1}`;
+      return { id: url, url };
+    }),
+  }));
+}
+const DEFAULT_DATA = { themes: [SEED_THEME], units: seedUnits(), records: {}, photos: {}, calendar: {} };
+
+function newThemeId() { return `t${Date.now().toString(36)}`; }
+
+let questionSeq = 0;
+function newQuestionId() {
+  questionSeq += 1;
+  return `q${Date.now().toString(36)}${questionSeq}`;
+}
+
+// 以前は「問題＝URL」だったので、保存済みデータを {id, url} の形に直す。
+// 旧データの id は URL そのものにしておくと、記録も写真（IndexedDBのキー）もそのまま使える。
+function migrate(data) {
+  if (!data || !Array.isArray(data.units)) return data;
+  const photos = {};
+  Object.keys(data.photos || {}).forEach(qid => {
+    const v = data.photos[qid];
+    // 昔は1問1枚で、写真のキーが問題IDそのものだった
+    if (Array.isArray(v)) photos[qid] = v;
+    else if (v) photos[qid] = [qid];
+  });
+  let units = data.units.map(u => u.questions
+    ? u
+    : { id: u.id, name: u.name, questions: (u.urls || []).map(url => ({ id: url, url })) });
+
+  // テーマ（試験）の層が無かった頃のデータを振り分ける。
+  // 最初から入っていた5単元は「基本情報技術者試験」、自分で作った単元は「未分類」に置く。
+  let themes = Array.isArray(data.themes) ? data.themes.slice() : [];
+  if (!themes.length) {
+    const isSeed = u => String(u.id).startsWith('seed');
+    if (units.some(isSeed)) themes.push({ ...SEED_THEME });
+    if (units.some(u => !isSeed(u))) themes.push({ id: 'tother', name: '未分類' });
+    if (!themes.length) themes.push({ ...SEED_THEME });
+    units = units.map(u => ({ ...u, themeId: isSeed(u) ? SEED_THEME.id : 'tother' }));
+  }
+  // 行き先を失った単元は先頭のテーマに置く
+  const themeIds = new Set(themes.map(t => t.id));
+  units = units.map(u => (u.themeId && themeIds.has(u.themeId)) ? u : { ...u, themeId: themes[0].id });
+
+  return { ...data, photos, themes, units };
+}
+const COUNT_OPTIONS = Array.from({ length: 21 }, (_, i) => i);
+
+function useLocalStorageState(key, initial) {
+  const [state, setState] = useState(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      // 保存データを先に今の形へ変換してから、足りないところだけ既定値で補う
+      // （先に既定値を混ぜると、テーマなどが「既にある」と誤判定されて変換が働かない）
+      return raw ? { ...initial, ...migrate(JSON.parse(raw)) } : initial;
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
+  }, [state]);
+  return [state, setState];
+}
+
+// スマホ幅かどうか（表→カード、カレンダーの作りを切り替える）
+function useIsPhone() {
+  const query = '(max-width: 720px)';
+  const [phone, setPhone] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const mq = matchMedia(query);
+    const on = () => setPhone(mq.matches);
+    if (mq.addEventListener) mq.addEventListener('change', on); else mq.addListener(on);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', on); else mq.removeListener(on); };
+  }, []);
+  return phone;
+}
+
+function dateStr(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+function todayStr() {
+  const d = new Date();
+  return dateStr(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function sample(arr, n) {
+  const pool = arr.slice();
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, Math.min(n, pool.length));
+}
+
+// 貼り付けたテキストから1行1件でURLを取り出す（Excelから列コピーしたときの余分な文字は無視）
+function parseUrls(text) {
+  const seen = new Set();
+  const urls = [];
+  text.split(/\r?\n/).forEach(line => {
+    // 1行に複数URLが並ぶ貼り付け方（Excelの横方向コピー）でも取りこぼさない
+    (line.match(/https?:\/\/\S+/g) || []).forEach(found => {
+      const url = found.trim();
+      if (seen.has(url)) return;
+      seen.add(url);
+      urls.push(url);
+    });
+  });
+  return urls;
+}
+
+// ── 写真保存（IndexedDB。1問に何枚でも持てる）───────────────────────────────
+const PHOTO_DB = 'feExamPhotos';
+const PHOTO_STORE = 'photos';
+const THUMB_SUFFIX = '#thumb';
+
+let photoSeq = 0;
+function newPhotoId() {
+  photoSeq += 1;
+  return `p${Date.now().toString(36)}${photoSeq}`;
+}
+// photos は { 問題ID: [写真ID, ...] }。古い { 問題ID: true } も読めるようにしておく
+function photoIdsOf(photos, qid) {
+  const v = photos[qid];
+  if (Array.isArray(v)) return v;
+  return v ? [qid] : [];
+}
+
+// 接続は1本だけ使い回す。毎回開くと接続が残り続け、ブラウザ側から
+// このデータベースを消せなくなる（消去やリセットが効かなくなる）
+let photoDbPromise = null;
+function openPhotoDB() {
+  if (!photoDbPromise) {
+    photoDbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(PHOTO_DB, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(PHOTO_STORE);
+      req.onsuccess = () => {
+        const db = req.result;
+        // 別のタブや消去操作から要求が来たら、こちらは閉じて道を空ける
+        db.onversionchange = () => { db.close(); photoDbPromise = null; };
+        db.onclose = () => { photoDbPromise = null; };
+        resolve(db);
+      };
+      req.onerror = () => { photoDbPromise = null; reject(req.error); };
+    });
+  }
+  return photoDbPromise;
+}
+function photoTx(mode, run) {
+  return openPhotoDB().then(db => new Promise((resolve, reject) => {
+    let tx;
+    try {
+      tx = db.transaction(PHOTO_STORE, mode);
+    } catch (e) {
+      // 接続が閉じられていたら開き直して、もう一度だけ試す
+      photoDbPromise = null;
+      return photoTx(mode, run).then(resolve, reject);
+    }
+    const req = run(tx.objectStore(PHOTO_STORE));
+    tx.oncomplete = () => resolve(req ? req.result : undefined);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  }));
+}
+const loadPhoto = pid => photoTx('readonly', st => st.get(pid));
+const loadThumb = pid => photoTx('readonly', st => st.get(pid + THUMB_SUFFIX));
+const erasePhoto = pid =>
+  photoTx('readwrite', st => { st.delete(pid); return st.delete(pid + THUMB_SUFFIX); }).catch(() => {});
+
+// スクショはそのままだと重いので、長辺1600pxまで縮小してJPEGにしてから保存する
+function compressImage(file, maxDim = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('画像を読み込めませんでした'));
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const hh = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = hh;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, hh);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// 表示用の原寸（縮小済み）とセル内サムネイルの2つを保存して、問題の末尾に足す。
+// 既にある写真と中身が同じだったら何枚目と同じかを返す（クリップボードが古いままのときに気付けるように）
+async function attachPhoto(qid, file, setData, existingIds) {
+  const full = await compressImage(file, 1600, 0.85);
+  let sameAs = 0;
+  for (let i = 0; i < (existingIds || []).length; i++) {
+    if ((await loadPhoto(existingIds[i])) === full) { sameAs = i + 1; break; }
+  }
+  const thumb = await compressImage(file, 160, 0.7);
+  const pid = newPhotoId();
+  await photoTx('readwrite', st => { st.put(full, pid); return st.put(thumb, pid + THUMB_SUFFIX); });
+  setData(d => ({ ...d, photos: { ...d.photos, [qid]: [...photoIdsOf(d.photos, qid), pid] } }));
+  return { pid, sameAs };
+}
+
+function fileLabel(file) {
+  const kb = Math.round((file.size || 0) / 1024);
+  return `${file.name || '画像'}／${kb}KB`;
+}
+
+// 画像の実体はここでは消さない（Ctrl+Zで戻せるように）。参照が完全に無くなったら gcPhotos が掃除する
+function detachPhoto(qid, pid, setData) {
+  setData(d => {
+    const rest = photoIdsOf(d.photos, qid).filter(x => x !== pid);
+    const photos = { ...d.photos };
+    if (rest.length) photos[qid] = rest;
+    else delete photos[qid];
+    return { ...d, photos };
+  });
+  return Promise.resolve();
+}
+
+// どこからも参照されなくなった画像を IndexedDB から消す。
+// 現在のデータと、元に戻せる履歴のどちらにも無いものだけが対象。
+async function gcPhotos(photoMaps) {
+  const keep = new Set();
+  photoMaps.forEach(photos => {
+    Object.keys(photos || {}).forEach(qid => photoIdsOf(photos, qid).forEach(pid => keep.add(pid)));
+  });
+  const keys = await photoTx('readonly', st => st.getAllKeys());
+  const dead = (keys || []).filter(k => !keep.has(String(k).replace(/#thumb$/, '')));
+  // 参照が1件も拾えていないのに全部消す、という掃除は必ず何かの間違いなので実行しない
+  if (!dead.length || (keep.size === 0 && keys.length > 0)) return 0;
+  await photoTx('readwrite', st => { dead.forEach(k => st.delete(k)); return null; });
+  return dead.length;
+}
+
+// 写真を複製する（問題のコピー用）
+async function copyPhotos(fromIds) {
+  const newIds = [];
+  for (const pid of fromIds) {
+    const full = await loadPhoto(pid);
+    const thumb = await loadThumb(pid);
+    if (!full) continue;
+    const nid = newPhotoId();
+    await photoTx('readwrite', st => { st.put(full, nid); return st.put(thumb || full, nid + THUMB_SUFFIX); });
+    newIds.push(nid);
+  }
+  return newIds;
+}
+
+// まとめて貼られた写真を、写真がまだ無い問題に上から順に割り当てる
+async function assignPhotos(questionIds, photos, files, setData) {
+  const targets = [];
+  questionIds.forEach((id, i) => {
+    if (photoIdsOf(photos, id).length === 0) targets.push({ id, no: i + 1 });
+  });
+  if (!targets.length) return '割り当て先がありません（すべての問題に写真があります）。行の「＋」を押してから貼ると、その問題に追加できます。';
+  const done = [];
+  let failed = 0;
+  for (let i = 0; i < Math.min(files.length, targets.length); i++) {
+    try {
+      await attachPhoto(targets[i].id, files[i], setData, []);
+      done.push(targets[i].no);
+    } catch (e) {
+      failed++;
+    }
+  }
+  const leftover = files.length - done.length - failed;
+  return (done.length ? `問題 ${done.join('・')} に写真を入れました（${done.length}枚）` : '写真を入れられませんでした')
+    + (leftover > 0 ? `／${leftover}枚は入れる先がなく未使用` : '')
+    + (failed > 0 ? `／${failed}枚は保存に失敗` : '');
+}
+
+function setCountFor(qid, field, value, setData) {
+  setData(d => {
+    const prev = d.records[qid] || { correct: 0, wrong: 0 };
+    return { ...d, records: { ...d.records, [qid]: { ...prev, [field]: value } } };
+  });
+}
+
+// 複数枚まとめて貼ったときは、ファイル名の数字順（＝撮った順）で上から割り当てる
+function imageFilesFrom(source, dedupe) {
+  let out = [];
+  if (source && source.items && source.items.length) {
+    for (const item of source.items) {
+      if (item.kind === 'file' && item.type && item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) out.push(f);
+      }
+    }
+  } else if (source && source.files) {
+    for (const f of source.files) {
+      if (f.type && f.type.startsWith('image/')) out.push(f);
+    }
+  }
+  // 1回のコピーでも、同じ絵がPNGとJPEGの両方でクリップボードに入ることがある。
+  // そのまま扱うと1枚のつもりが2枚として別々の問題に入ってしまうので、拡張子違いは1枚にまとめる。
+  if (dedupe) {
+    const seen = new Set();
+    out = out.filter(f => {
+      const base = String(f.name || '').replace(/\.[^.]*$/, '').toLowerCase();
+      if (seen.has(base)) return false;
+      seen.add(base);
+      return true;
+    });
+  }
+  return out.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }));
+}
+
+// ── 写真の受け取り（貼り付け・ドロップ・ファイル選択）─────────────────────────
+function PhotoDropZone({ label, multiple, onImages }) {
+  const [hot, setHot] = useState(false);
+
+  return h('div', {
+    onDragOver: e => { e.preventDefault(); setHot(true); },
+    onDragLeave: () => setHot(false),
+    onDrop: e => {
+      e.preventDefault();
+      setHot(false);
+      const files = imageFilesFrom(e.dataTransfer, true);
+      if (files.length) onImages(files);
+    },
+    className: `xl-drop ${hot ? 'hot' : ''}`
+  },
+    h('p', { style: { marginBottom: '8px' } }, label),
+    h('label', { className: 'xl-btn xl-btn-sub', style: { cursor: 'pointer' } },
+      multiple ? '写真を選ぶ（複数可）' : '写真を選ぶ',
+      h('input', {
+        type: 'file', accept: 'image/*', multiple: !!multiple, style: { display: 'none' },
+        onChange: e => {
+          const files = imageFilesFrom(e.target);
+          if (files.length) onImages(files);
+          e.target.value = '';
+        }
+      })
+    )
+  );
+}
+
+// 画面のどこで Ctrl+V しても拾う（入力欄にフォーカスがあるときは邪魔しない）
+function useWindowPaste(active, handler) {
+  const cb = useRef(handler);
+  cb.current = handler;
+  useEffect(() => {
+    if (!active) return;
+    function onPaste(e) {
+      const tag = e.target && e.target.tagName;
+      const inField = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
+      // 入力欄に文字を貼るのは邪魔しない。ただし画像は、どこにカーソルがあっても受け取る
+      if (inField && !imageFilesFrom(e.clipboardData).length) return;
+      if (cb.current(e.clipboardData)) e.preventDefault();
+    }
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [active]);
+}
+
+// ── 写真モーダル（画面中央に表示。複数枚は送り送りで見る）─────────────────────
+function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, currentNo, currentText, onMove }) {
+  const [src, setSrc] = useState(null);
+  const pid = ids[index];
+  // 移動先は「ひとつ前の問題」を初期値にする（問題の次に解答が来る問題集で使いやすい）
+  const defaultTarget = (moveTargets && moveTargets.length)
+    ? (moveTargets.filter(t => t.no < currentNo).pop() || moveTargets[0]).id
+    : '';
+  const [moveTo, setMoveTo] = useState(defaultTarget);
+  useEffect(() => { setMoveTo(defaultTarget); }, [defaultTarget]);
+
+  useEffect(() => {
+    let alive = true;
+    setSrc(null);
+    if (!pid) { setSrc(''); return; }
+    loadPhoto(pid).then(v => { if (alive) setSrc(v || ''); }).catch(() => { if (alive) setSrc(''); });
+    return () => { alive = false; };
+  }, [pid]);
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && index > 0) onIndex(index - 1);
+      if (e.key === 'ArrowRight' && index < ids.length - 1) onIndex(index + 1);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, onIndex, index, ids.length]);
+
+  const navBtn = {
+    width: '44px', height: '44px', borderRadius: '50%', fontSize: '20px', lineHeight: 1,
+    background: 'rgba(17,24,39,.8)', border: '1px solid #374151', color: '#fff', cursor: 'pointer',
+  };
+
+  return h('div', {
+    onClick: onClose,
+    // ポモドーロタイマー（z-50）より前面に出す
+    style: { zIndex: 60 },
+    className: 'fixed inset-0 bg-black/85 flex items-center justify-center p-4'
+  },
+    ids.length > 1 && h('button', {
+      onClick: e => { e.stopPropagation(); onIndex(index - 1); },
+      disabled: index === 0,
+      style: { ...navBtn, position: 'absolute', left: '16px', opacity: index === 0 ? 0.3 : 1 },
+    }, '‹'),
+
+    src === null
+      ? h('p', { className: 'text-sm text-gray-400' }, '読み込み中…')
+      : src
+        ? h('img', {
+            src,
+            onClick: e => e.stopPropagation(),
+            className: 'rounded-lg shadow-2xl',
+            style: { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' },
+          })
+        : h('p', { className: 'text-sm text-gray-400' }, '写真がありません'),
+
+    ids.length > 1 && h('button', {
+      onClick: e => { e.stopPropagation(); onIndex(index + 1); },
+      disabled: index >= ids.length - 1,
+      style: { ...navBtn, position: 'absolute', right: '16px', opacity: index >= ids.length - 1 ? 0.3 : 1 },
+    }, '›'),
+
+    h('div', {
+      onClick: e => e.stopPropagation(),
+      style: {
+        position: 'absolute', bottom: '16px', display: 'flex', alignItems: 'center', gap: '10px',
+        background: 'rgba(17,24,39,.85)', border: '1px solid #374151', borderRadius: '8px', padding: '8px 12px',
+      },
+    },
+      h('span', { className: 'text-xs text-gray-300', style: { maxWidth: '420px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+        `問題 ${currentNo}` + (ids.length > 1 ? ` の ${index + 1} / ${ids.length} 枚目` : ' の写真')
+        + (currentText ? `　${currentText}` : '')),
+      onMove && moveTargets && moveTargets.length > 0 && h('span', { className: 'text-xs text-gray-400' }, '｜ 別の問題へ移す:'),
+      onMove && moveTargets && moveTargets.length > 0 && h('select', {
+        value: moveTo, onChange: e => setMoveTo(e.target.value),
+        className: 'text-xs rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
+      }, moveTargets.map(t => h('option', { key: t.id, value: t.id },
+        `問題 ${t.no}` + (t.text ? `　${t.text.length > 60 ? t.text.slice(0, 60) + '…' : t.text}` : '　（URLなし）')))),
+      onMove && moveTargets && moveTargets.length > 0 && h('button', {
+        onClick: () => onMove(pid, moveTo),
+        className: 'text-xs px-3 py-1.5 rounded-lg bg-green-800 border border-green-600 text-green-100',
+      }, '移す'),
+      onDelete && h('button', {
+        onClick: () => onDelete(pid),
+        className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-900/80 border border-red-800 text-red-300',
+      }, 'この写真を削除')
+    ),
+
+    h('button', {
+      onClick: onClose,
+      className: 'absolute top-4 right-4 w-10 h-10 rounded-full bg-gray-900/80 border border-gray-700 text-white text-xl leading-none'
+    }, '×')
+  );
+}
+
+// ── 写真セル（セル内にサムネイル。複数枚並ぶ）─────────────────────────────────
+function PhotoThumb({ pid, onOpen }) {
+  const [thumb, setThumb] = useState('');
+  useEffect(() => {
+    let alive = true;
+    loadThumb(pid).then(v => { if (alive) setThumb(v || ''); }).catch(() => {});
+    return () => { alive = false; };
+  }, [pid]);
+  return thumb
+    ? h('img', { src: thumb, className: 'xl-thumb', onClick: onOpen, title: 'クリックで拡大' })
+    : h('button', { className: 'xl-btn xl-btn-sub', style: { padding: '2px 8px' }, onClick: onOpen }, '📷');
+}
+
+function PhotoCell({ pids, isTarget, onOpen, onPick }) {
+  const shown = pids.slice(0, 4);
+  return h('div', { className: 'xl-cell', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+    shown.map((pid, i) => h(PhotoThumb, { key: pid, pid, onOpen: () => onOpen(i) })),
+    pids.length > shown.length && h('span', { style: { fontSize: '11px', color: '#666' } }, `+${pids.length - shown.length}`),
+    h('button', {
+      className: 'xl-btn xl-btn-sub',
+      style: {
+        padding: '2px 8px', fontSize: '12px',
+        ...(isTarget ? { borderColor: '#217346', background: '#eef8f1' } : {}),
+      },
+      onClick: onPick,
+      title: pids.length ? '写真を追加する' : '写真を入れる',
+    }, isTarget ? '貼付待ち…' : (pids.length ? '＋' : '＋ 写真'))
+  );
+}
+
+// ── 問題の表（Excelのシート相当）──────────────────────────────────────────────
+function QuestionSheet({
+  questions, nos, data, onSetUrl, onSetCount, onOpenPhoto, onPickPhoto,
+  pasteTarget, onDeleteRow, onDuplicate, onReorder, scrollSignal, emptyText,
+}) {
+  const isPhone = useIsPhone();
+  const scroller = useRef(null);
+  // 行番号のセルをつまんだときだけ行を掴めるようにする（URL欄の文字選択を邪魔しないため）
+  const [grabId, setGrabId] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [overId, setOverId] = useState(null);
+  const [after, setAfter] = useState(false);
+
+  function endDrag() { setGrabId(null); setDragId(null); setOverId(null); }
+
+  // 問題を追加したときは、追加した行が見えるところまで送る
+  useEffect(() => {
+    if (scrollSignal && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
+  }, [scrollSignal]);
+
+  if (!questions.length) {
+    return h('div', { className: 'xl-empty' }, emptyText || 'まだ問題がありません。');
+  }
+
+  // スマホでは表が入りきらないので、1問1枚のカードにする
+  if (isPhone) {
+    return h('div', { className: 'xl-scroll', ref: scroller },
+      questions.map((q, i) => {
+        const r = data.records[q.id] || { correct: 0, wrong: 0 };
+        const no = nos ? nos[i] : i + 1;
+        return h('div', { className: 'q-card', key: q.id },
+          h('div', { className: 'q-head' },
+            h('span', { className: 'q-no' }, `No.${no}`),
+            onReorder && h('div', { style: { marginLeft: 'auto', display: 'flex', gap: '6px' } },
+              h('button', {
+                className: 'xl-btn xl-btn-sub', disabled: i === 0,
+                onClick: () => onReorder(q.id, questions[i - 1].id, false), title: '上へ',
+              }, '↑'),
+              h('button', {
+                className: 'xl-btn xl-btn-sub', disabled: i === questions.length - 1,
+                onClick: () => onReorder(q.id, questions[i + 1].id, true), title: '下へ',
+              }, '↓')
+            ),
+            onDuplicate && h('button', {
+              className: 'xl-btn xl-btn-sub', style: onReorder ? {} : { marginLeft: 'auto' },
+              onClick: () => onDuplicate(q.id),
+            }, '複製'),
+            onDeleteRow && h('button', {
+              className: 'xl-btn xl-btn-sub', style: { color: '#a11' },
+              onClick: () => onDeleteRow(q.id),
+            }, '×')
+          ),
+
+          onSetUrl
+            ? h('input', {
+                type: 'text', className: 'xl-input', value: q.url || '',
+                placeholder: 'URLを貼り付け（写真だけでも可）',
+                style: { width: '100%', fontSize: '16px' },
+                onChange: e => onSetUrl(q.id, e.target.value),
+              })
+            : null,
+          q.url
+            ? h('a', { className: 'q-open', href: q.url, target: '_blank', rel: 'noopener noreferrer' }, '問題を開く →')
+            : (onSetUrl ? null : h('div', { style: { color: '#999', fontSize: '13px', margin: '6px 0' } }, '（URLなし）')),
+
+          h('div', { className: 'q-row' },
+            h('label', null, '正解'),
+            h('select', {
+              value: r.correct, onChange: e => onSetCount(q.id, 'correct', Number(e.target.value)),
+            }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
+            h('label', null, '不正解'),
+            h('select', {
+              value: r.wrong, onChange: e => onSetCount(q.id, 'wrong', Number(e.target.value)),
+            }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n)))
+          ),
+
+          h('div', { className: 'q-photos' },
+            photoIdsOf(data.photos, q.id).map((pid, pi) =>
+              h(PhotoThumb, { key: pid, pid, onOpen: () => onOpenPhoto(q.id, pi) })),
+            h('button', {
+              className: 'xl-btn xl-btn-sub',
+              style: pasteTarget === q.id ? { borderColor: '#217346', background: '#eef8f1' } : {},
+              onClick: () => onPickPhoto(q.id),
+            }, pasteTarget === q.id ? '貼付待ち…' : '＋ 写真')
+          )
+        );
+      })
+    );
+  }
+
+  return h('div', { className: 'xl-scroll', ref: scroller },
+    h('table', { className: 'xl-table' },
+      h('thead', null,
+        h('tr', null,
+          h('th', { className: 'xl-rownum', style: { top: 0 } }, 'No'),
+          h('th', { className: 'xl-col-url' }, '問題URL'),
+          h('th', null, '正解回数'),
+          h('th', null, '不正解回数'),
+          h('th', { className: 'xl-col-photo' }, '写真'),
+          (onDeleteRow || onDuplicate) && h('th', null, '')
+        )
+      ),
+      h('tbody', null,
+        questions.map((q, i) => {
+          const r = data.records[q.id] || { correct: 0, wrong: 0 };
+          const rowNo = nos ? nos[i] : i + 1;
+          const dragging = dragId === q.id;
+          const over = onReorder && overId === q.id && dragId && dragId !== q.id;
+          return h('tr', {
+            key: q.id,
+            draggable: !!onReorder && (grabId === q.id || dragging),
+            className: [dragging ? 'xl-dragging' : '', over ? (after ? 'xl-drop-after' : 'xl-drop-before') : ''].filter(Boolean).join(' '),
+            onDragStart: onReorder ? e => {
+              setDragId(q.id);
+              e.dataTransfer.effectAllowed = 'move';
+              try { e.dataTransfer.setData('text/plain', q.id); } catch (err) {}
+            } : undefined,
+            onDragOver: onReorder ? e => {
+              if (!dragId) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              const box = e.currentTarget.getBoundingClientRect();
+              const isAfter = e.clientY > box.top + box.height / 2;
+              if (overId !== q.id) setOverId(q.id);
+              if (after !== isAfter) setAfter(isAfter);
+            } : undefined,
+            onDrop: onReorder ? e => {
+              e.preventDefault();
+              if (dragId && dragId !== q.id) onReorder(dragId, q.id, after);
+              endDrag();
+            } : undefined,
+            onDragEnd: onReorder ? endDrag : undefined,
+          },
+            h('td', {
+              className: 'xl-rownum' + (onReorder ? ' xl-grip' : ''),
+              title: onReorder ? 'ドラッグで並べ替え' : undefined,
+              onMouseDown: onReorder ? () => setGrabId(q.id) : undefined,
+              onMouseUp: onReorder ? () => setGrabId(null) : undefined,
+            }, onReorder ? h('span', { className: 'g' }, '⠿') : null, rowNo),
+            h('td', null, h('div', { className: 'xl-cell', style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 6px' } },
+              onSetUrl
+                ? h('input', {
+                    type: 'text', className: 'xl-url', value: q.url || '',
+                    placeholder: 'URLを貼り付け（写真だけでも可）',
+                    onChange: e => onSetUrl(q.id, e.target.value),
+                  })
+                : h('span', { style: { flex: '1 1 auto', color: q.url ? '#1f2328' : '#999' } }, q.url || '（URLなし）'),
+              q.url
+                ? h('a', {
+                    href: q.url, target: '_blank', rel: 'noopener noreferrer',
+                    className: 'xl-link', style: { flex: '0 0 auto' },
+                  }, '開く →')
+                : null
+            )),
+            h('td', null, h('div', { className: 'xl-cell', style: { padding: '2px 6px' } },
+              h('select', {
+                className: 'xl-select', value: r.correct,
+                onChange: e => onSetCount(q.id, 'correct', Number(e.target.value))
+              }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n)))
+            )),
+            h('td', null, h('div', { className: 'xl-cell', style: { padding: '2px 6px' } },
+              h('select', {
+                className: 'xl-select', value: r.wrong,
+                onChange: e => onSetCount(q.id, 'wrong', Number(e.target.value))
+              }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n)))
+            )),
+            h('td', null, h(PhotoCell, {
+              pids: photoIdsOf(data.photos, q.id),
+              isTarget: pasteTarget === q.id,
+              onOpen: i => onOpenPhoto(q.id, i),
+              onPick: () => onPickPhoto(q.id),
+            })),
+            (onDeleteRow || onDuplicate) && h('td', null, h('div', { className: 'xl-cell', style: { display: 'flex', gap: '4px' } },
+              onDuplicate && h('button', {
+                className: 'xl-btn xl-btn-sub', style: { padding: '2px 8px', fontSize: '12px' },
+                onClick: () => onDuplicate(q.id), title: 'この問題をコピーして下に追加'
+              }, '複製'),
+              onDeleteRow && h('button', {
+                className: 'xl-btn xl-btn-sub', style: { padding: '2px 8px', fontSize: '12px', color: '#a11' },
+                onClick: () => onDeleteRow(q.id), title: 'この行を削除'
+              }, '×')
+            ))
+          );
+        })
+      )
+    )
+  );
+}
+
+// ── 出題ページ ────────────────────────────────────────────────────────────────
+function DrawPage({ data, setData, onShowPhoto, setMsg, sel }) {
+  const { theme, unitsOfTheme, unit, setThemeId, setUnitId } = sel;
+  const [filterCorrect, setFilterCorrect] = useState('');
+  const [filterWrong, setFilterWrong] = useState('');
+  const [count, setCount] = useState(5);
+  const [rangeStart, setRangeStart] = useState(1);
+  const [rangeEnd, setRangeEnd] = useState(0); // 0 は「最後まで」
+  const [results, setResults] = useState([]);
+  const [pasteTarget, setPasteTarget] = useState(null);
+
+  const total = unit ? unit.questions.length : 0;
+  const endNo = rangeEnd > 0 ? Math.min(rangeEnd, total) : total;
+
+  // 単元を変えたら、Excelと同じく範囲は 1〜問題数 に戻す
+  useEffect(() => {
+    setResults([]); setPasteTarget(null); setRangeStart(1); setRangeEnd(0);
+  }, [unit ? unit.id : '']);
+
+  useWindowPaste(!!pasteTarget, clipboard => {
+    const files = imageFilesFrom(clipboard, true);
+    if (!files.length) return false;
+    const existing = photoIdsOf(data.photos, pasteTarget);
+    attachPhoto(pasteTarget, files[0], setData, existing)
+      .then(({ sameAs }) => {
+        setPasteTarget(null);
+        setMsg(`写真を入れました（${existing.length + 1}枚目・${fileLabel(files[0])}）`
+          + (sameAs ? `　※この問題の${sameAs}枚目と同じ画像です。コピーし直してから貼り直してください` : ''));
+      })
+      .catch(e => setMsg('写真を保存できませんでした: ' + (e && e.message ? e.message : e)));
+    return true;
+  });
+
+  if (!unit) {
+    return h('div', { className: 'xl-empty' },
+      data.units.length ? 'このテーマには単元がありません。「単元管理」タブで作成してください。'
+                        : '単元がありません。「単元管理」タブでテーマと単元を作成してください。');
+  }
+
+  const pool = unit ? unit.questions.map((q, i) => ({ q, no: i + 1 })).filter(item => {
+    if (item.no < rangeStart || item.no > endNo) return false;
+    const r = data.records[item.q.id] || { correct: 0, wrong: 0 };
+    if (filterCorrect !== '' && r.correct !== Number(filterCorrect)) return false;
+    if (filterWrong !== '' && r.wrong !== Number(filterWrong)) return false;
+    return true;
+  }) : [];
+
+  const filterClass = 'bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white';
+
+  return h('div', { className: 'xl-app' },
+    h('div', { className: 'xl-toolbar flex flex-wrap items-end gap-4' },
+      h('div', { className: 'xl-field-wide' },
+        h('label', { className: 'xl-label' }, 'テーマ'),
+        h('select', { title: 'テーマ', value: theme ? theme.id : '', onChange: e => setThemeId(e.target.value), style: { minWidth: '180px' } },
+          data.themes.map(t => h('option', { key: t.id, value: t.id }, t.name))
+        )
+      ),
+      h('div', { className: 'xl-field-wide' },
+        h('label', { className: 'xl-label' }, '単元'),
+        h('select', { title: '単元', value: unit ? unit.id : '', onChange: e => setUnitId(e.target.value), style: { minWidth: '200px' } },
+          unitsOfTheme.map(u => h('option', { key: u.id, value: u.id }, `${u.name}（全${u.questions.length}問）`))
+        )
+      ),
+      h('div', null,
+        h('label', { className: 'xl-label' }, '開始No'),
+        h('input', {
+          title: '開始No', type: 'number', min: 1, max: total || 1, value: rangeStart, style: { width: '80px' },
+          onChange: e => setRangeStart(Math.max(1, Number(e.target.value) || 1))
+        })
+      ),
+      h('div', null,
+        h('label', { className: 'xl-label' }, '終了No'),
+        h('input', {
+          title: '終了No', type: 'number', min: 1, max: total || 1, value: endNo, style: { width: '80px' },
+          onChange: e => setRangeEnd(Math.max(1, Number(e.target.value) || 1))
+        })
+      ),
+      h('div', null,
+        h('label', { className: 'xl-label' }, '正解回数'),
+        h('select', { title: '正解回数', value: filterCorrect, onChange: e => setFilterCorrect(e.target.value) },
+          h('option', { value: '' }, '指定なし'),
+          COUNT_OPTIONS.map(n => h('option', { key: n, value: String(n) }, `${n} 回`))
+        )
+      ),
+      h('div', null,
+        h('label', { className: 'xl-label' }, '不正解回数'),
+        h('select', { title: '不正解回数', value: filterWrong, onChange: e => setFilterWrong(e.target.value) },
+          h('option', { value: '' }, '指定なし'),
+          COUNT_OPTIONS.map(n => h('option', { key: n, value: String(n) }, `${n} 回`))
+        )
+      ),
+      h('div', null,
+        h('label', { className: 'xl-label' }, '出題数'),
+        h('input', {
+          title: '出題数', type: 'number', min: 1, value: count, style: { width: '80px' },
+          onChange: e => setCount(Math.max(1, Number(e.target.value) || 1))
+        })
+      ),
+      h('button', {
+        className: 'xl-btn',
+        disabled: pool.length === 0,
+        onClick: () => { setResults(sample(pool, count)); setPasteTarget(null); }
+      }, results.length ? '🎲 再抽選' : '🎲 抽選する')
+    ),
+
+    pasteTarget && h('div', { className: 'xl-target' }, '写真の貼り付け先を選択中です。Ctrl+V で貼り付けてください。'),
+
+    results.length === 0
+      ? h('div', { className: 'xl-empty' }, '「抽選する」を押すと、条件に合う問題からランダムに出題します。')
+      : h(QuestionSheet, {
+          questions: results.map(r => r.q), nos: results.map(r => r.no), data,
+          onSetCount: (qid, field, value) => setCountFor(qid, field, value, setData),
+          onOpenPhoto: onShowPhoto,
+          onPickPhoto: qid => setPasteTarget(pasteTarget === qid ? null : qid),
+          pasteTarget,
+        }),
+
+    h('div', { className: 'xl-status' },
+      `${theme ? theme.name : '-'} ／ ${unit ? unit.name : '-'} ｜ 全${total}問 ｜ 出題範囲 ${rangeStart}〜${endNo} ｜ 条件に合う問題 ${pool.length}問`
+      + (results.length ? ` ｜ 出題中 ${results.length}問` : '')
+      + (pool.length > 0 && pool.length < count ? `　※条件に合うのが${pool.length}問しかないため、${pool.length}問だけ出題します` : '')
+    )
+  );
+}
+
+// ── 単元管理ページ ────────────────────────────────────────────────────────────
+function UnitsPage({ data, setData, onShowPhoto, setMsg, sel }) {
+  const { theme, unitsOfTheme, unit, setThemeId, setUnitId } = sel;
+  const [pasteTarget, setPasteTarget] = useState(null);
+  const [urlText, setUrlText] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [addingTheme, setAddingTheme] = useState(false);
+  const [newThemeName, setNewThemeName] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmThemeDelete, setConfirmThemeDelete] = useState(false);
+  const [scrollSignal, setScrollSignal] = useState(0);
+
+  function updateUnit(fn) {
+    setData(d => ({ ...d, units: d.units.map(u => u.id === unit.id ? fn(u) : u) }));
+  }
+
+  // 空の問題を1件足す。Noはそれまでの最後の問題+1（＝末尾に追加）
+  function addQuestion() {
+    if (!unit) return;
+    const q = { id: newQuestionId(), url: '' };
+    updateUnit(u => ({ ...u, questions: [...u.questions, q] }));
+    setScrollSignal(n => n + 1);
+    setMsg(`問題 ${unit.questions.length + 1} を追加しました。URLか写真を入れてください。`);
+  }
+
+  function addFromUrls(urls) {
+    if (!unit) return 0;
+    const known = new Set(unit.questions.map(q => q.url).filter(Boolean));
+    const fresh = urls.filter(u => !known.has(u));
+    if (!fresh.length) return 0;
+    updateUnit(u => ({
+      ...u,
+      questions: [...u.questions, ...fresh.map(url => ({ id: newQuestionId(), url }))],
+    }));
+    setScrollSignal(n => n + 1);
+    return fresh.length;
+  }
+
+  // 問題をコピーして真下に足す。Noは新しく振られ、記録は0から始める
+  async function duplicateQuestion(qid) {
+    if (!unit) return;
+    const src = unit.questions.find(q => q.id === qid);
+    if (!src) return;
+    const copy = { id: newQuestionId(), url: src.url };
+    const newPids = await copyPhotos(photoIdsOf(data.photos, qid));
+    setData(d => ({
+      ...d,
+      units: d.units.map(u => {
+        if (u.id !== unit.id) return u;
+        const qs = u.questions.slice();
+        qs.splice(qs.findIndex(q => q.id === qid) + 1, 0, copy);
+        return { ...u, questions: qs };
+      }),
+      photos: newPids.length ? { ...d.photos, [copy.id]: newPids } : d.photos,
+    }));
+    setMsg(`問題をコピーしました（写真${newPids.length}枚も複製。正解・不正解の回数は0から）`);
+  }
+
+  // ドラッグした問題を、落とした行の前（または後ろ）へ移す
+  function reorder(fromId, toId, after) {
+    updateUnit(u => {
+      const qs = u.questions.slice();
+      const from = qs.findIndex(q => q.id === fromId);
+      if (from < 0) return u;
+      const [moved] = qs.splice(from, 1);
+      let to = qs.findIndex(q => q.id === toId);
+      if (to < 0) return u;
+      qs.splice(after ? to + 1 : to, 0, moved);
+      return { ...u, questions: qs };
+    });
+  }
+
+  function setUrl(qid, url) {
+    updateUnit(u => ({ ...u, questions: u.questions.map(q => q.id === qid ? { ...q, url } : q) }));
+  }
+
+  // 表の上で Ctrl+V：画像なら写真として、文字ならURLの行として取り込む
+  useWindowPaste(!!unit, clipboard => {
+    const files = imageFilesFrom(clipboard, true);
+    if (files.length) {
+      if (pasteTarget) {
+        const no = unit.questions.findIndex(q => q.id === pasteTarget) + 1;
+        const existing = photoIdsOf(data.photos, pasteTarget);
+        attachPhoto(pasteTarget, files[0], setData, existing)
+          .then(({ sameAs }) => {
+            setPasteTarget(null);
+            setMsg(`問題 ${no} に写真を入れました（${existing.length + 1}枚目・${fileLabel(files[0])}）`
+              + (sameAs ? `　※この問題の${sameAs}枚目と同じ画像です。コピーし直してから貼り直してください` : ''));
+          })
+          .catch(e => setMsg('写真を保存できませんでした: ' + (e && e.message ? e.message : e)));
+      } else {
+        assignPhotos(unit.questions.map(q => q.id), data.photos, files, setData).then(setMsg);
+      }
+      return true;
+    }
+    const urls = parseUrls(clipboard.getData('text') || '');
+    if (!urls.length) return false;
+    const added = addFromUrls(urls);
+    setMsg(added ? `${added}件のURLを追加しました` : '追加できるURLがありませんでした（すべて登録済み）');
+    return true;
+  });
+
+  // 公開ページはサンドボックス内で動き prompt/confirm が無視されるので、画面内で完結させる
+  function createUnit() {
+    const name = newName.trim() || `単元${data.units.length + 1}`;
+    const unitNew = { id: `u${Date.now()}`, themeId: theme ? theme.id : '', name, questions: [] };
+    setData(d => ({ ...d, units: [...d.units, unitNew] }));
+    setUnitId(unitNew.id);
+    setNewName('');
+    setAdding(false);
+    setMsg(`「${name}」を作成しました。「＋ 問題を追加」かURLの貼り付けで問題を入れてください。`);
+  }
+
+  function createTheme() {
+    const name = newThemeName.trim() || `テーマ${data.themes.length + 1}`;
+    const t = { id: newThemeId(), name };
+    setData(d => ({ ...d, themes: [...d.themes, t] }));
+    setThemeId(t.id);
+    setNewThemeName('');
+    setAddingTheme(false);
+    setMsg(`テーマ「${name}」を作成しました。「＋ 新しい単元」で単元を追加してください。`);
+  }
+
+  function deleteTheme() {
+    if (!theme) return;
+    setConfirmThemeDelete(false);
+    const gone = data.units.filter(u => u.themeId === theme.id);
+    setData(d => {
+      const records = { ...d.records };
+      const photos = { ...d.photos };
+      gone.forEach(u => u.questions.forEach(q => { delete records[q.id]; delete photos[q.id]; }));
+      return {
+        ...d,
+        themes: d.themes.filter(t => t.id !== theme.id),
+        units: d.units.filter(u => u.themeId !== theme.id),
+        records, photos,
+      };
+    });
+    setMsg(`テーマ「${theme.name}」と単元${gone.length}件を削除しました（Ctrl+Z で元に戻せます）`);
+  }
+
+  async function deleteUnit() {
+    if (!unit) return;
+    setConfirmDelete(false);
+    setData(d => {
+      const records = { ...d.records };
+      const photos = { ...d.photos };
+      unit.questions.forEach(q => { delete records[q.id]; delete photos[q.id]; });
+      const units = d.units.filter(u => u.id !== unit.id);
+      return { ...d, units, records, photos };
+    });
+    // 選択は切り替えない。存在しない間は先頭の単元が表示され、Ctrl+Zで戻すと元の単元に復帰する
+    setMsg(`「${unit.name}」を削除しました（Ctrl+Z で元に戻せます）`);
+  }
+
+  function deleteRow(qid) {
+    setData(d => {
+      const records = { ...d.records };
+      const photos = { ...d.photos };
+      delete records[qid];
+      delete photos[qid];
+      return {
+        ...d,
+        units: d.units.map(u => u.id === unit.id ? { ...u, questions: u.questions.filter(q => q.id !== qid) } : u),
+        records, photos,
+      };
+    });
+  }
+
+  const inputClass = 'w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white';
+
+  // 「＋ 新しい単元」を押すと出てくる入力欄
+  const newUnitForm = adding
+    ? h('div', { className: 'flex items-end gap-2' },
+        h('div', null,
+          h('label', { className: 'xl-label' }, '新しい単元の名前'),
+          h('input', {
+            type: 'text', value: newName, autoFocus: true, style: { width: '220px' },
+            placeholder: '例: 離散数学',
+            onChange: e => setNewName(e.target.value),
+            onKeyDown: e => { if (e.key === 'Enter') createUnit(); if (e.key === 'Escape') { setAdding(false); setNewName(''); } }
+          })
+        ),
+        h('button', { className: 'xl-btn', onClick: createUnit }, '作成'),
+        h('button', { className: 'xl-btn xl-btn-sub', onClick: () => { setAdding(false); setNewName(''); } }, 'やめる')
+      )
+    : h('button', { className: 'xl-btn xl-btn-sub', onClick: () => { setAdding(true); setNewName(''); } }, '＋ 新しい単元');
+
+  // テーマの行（新規作成・名前変更・削除）
+  const themeRow = h('div', { className: 'xl-toolbar flex flex-wrap items-end gap-3' },
+    h('div', null,
+      h('label', { className: 'xl-label' }, 'テーマ（試験）'),
+      h('select', {
+        title: 'テーマ', value: theme ? theme.id : '', style: { minWidth: '200px' },
+        onChange: e => { setThemeId(e.target.value); setPasteTarget(null); setConfirmDelete(false); setConfirmThemeDelete(false); },
+      }, data.themes.map(t => h('option', { key: t.id, value: t.id },
+        `${t.name}（${data.units.filter(u => u.themeId === t.id).length}単元）`)))
+    ),
+    theme && h('div', { className: 'xl-field-wide' },
+      h('label', { className: 'xl-label' }, 'テーマ名'),
+      h('input', {
+        type: 'text', value: theme.name, style: { width: '180px' },
+        onChange: e => {
+          const v = e.target.value;
+          setData(d => ({ ...d, themes: d.themes.map(t => t.id === theme.id ? { ...t, name: v } : t) }));
+        }
+      })
+    ),
+    addingTheme
+      ? h('div', { className: 'flex items-end gap-2' },
+          h('div', null,
+            h('label', { className: 'xl-label' }, '新しいテーマの名前'),
+            h('input', {
+              type: 'text', value: newThemeName, autoFocus: true, style: { width: '200px' },
+              placeholder: '例: 税理士試験',
+              onChange: e => setNewThemeName(e.target.value),
+              onKeyDown: e => { if (e.key === 'Enter') createTheme(); if (e.key === 'Escape') { setAddingTheme(false); setNewThemeName(''); } }
+            })
+          ),
+          h('button', { className: 'xl-btn', onClick: createTheme }, '作成'),
+          h('button', { className: 'xl-btn xl-btn-sub', onClick: () => { setAddingTheme(false); setNewThemeName(''); } }, 'やめる')
+        )
+      : h('button', { className: 'xl-btn xl-btn-sub', onClick: () => { setAddingTheme(true); setNewThemeName(''); } }, '＋ 新しいテーマ'),
+    theme && (confirmThemeDelete
+      ? h('div', { className: 'flex items-center gap-2' },
+          h('span', { style: { fontSize: '12px', color: '#a11' } },
+            `「${theme.name}」と中の単元${unitsOfTheme.length}件を削除します`),
+          h('button', { className: 'xl-btn', style: { background: '#a11', borderColor: '#800' }, onClick: deleteTheme }, '削除する'),
+          h('button', { className: 'xl-btn xl-btn-sub', onClick: () => setConfirmThemeDelete(false) }, 'やめる')
+        )
+      : h('button', {
+          className: 'xl-btn xl-btn-sub', style: { color: '#a11' },
+          onClick: () => setConfirmThemeDelete(true),
+        }, 'このテーマを削除'))
+  );
+
+  if (!unit) {
+    return h('div', { className: 'xl-app' },
+      themeRow,
+      h('div', { className: 'xl-toolbar' }, newUnitForm),
+      h('div', { className: 'xl-empty' },
+        theme ? `テーマ「${theme.name}」にはまだ単元がありません。「＋ 新しい単元」から作成してください。`
+              : 'テーマがありません。「＋ 新しいテーマ」から作成してください。'),
+      h(TransferPanel, { data, setData, setMsg, sel })
+    );
+  }
+
+  const withPhoto = unit ? unit.questions.filter(q => photoIdsOf(data.photos, q.id).length).length : 0;
+  const photoCount = unit ? unit.questions.reduce((n, q) => n + photoIdsOf(data.photos, q.id).length, 0) : 0;
+  const withUrl = unit ? unit.questions.filter(q => q.url).length : 0;
+
+  return h('div', { className: 'xl-app' },
+    themeRow,
+    h('div', { className: 'xl-toolbar flex flex-wrap items-end gap-3' },
+      h('div', { className: 'xl-field-wide' },
+        h('label', { className: 'xl-label' }, '単元'),
+        h('select', {
+          title: '単元', value: unit ? unit.id : '', style: { minWidth: '200px' },
+          onChange: e => { setUnitId(e.target.value); setPasteTarget(null); setConfirmDelete(false); },
+        }, unitsOfTheme.map(u => h('option', { key: u.id, value: u.id }, `${u.name}（${u.questions.length}問）`)))
+      ),
+      h('div', null,
+        h('label', { className: 'xl-label' }, '単元名'),
+        h('input', {
+          type: 'text', value: unit ? unit.name : '', style: { width: '180px' },
+          onChange: e => { const v = e.target.value; updateUnit(u => ({ ...u, name: v })); }
+        })
+      ),
+      data.themes.length > 1 && h('div', null,
+        h('label', { className: 'xl-label' }, 'この単元のテーマ'),
+        h('select', {
+          title: 'この単元のテーマ', value: unit.themeId, style: { minWidth: '150px' },
+          onChange: e => {
+            const to = e.target.value;
+            updateUnit(u => ({ ...u, themeId: to }));
+            setThemeId(to);
+            setUnitId(unit.id);
+            const t = data.themes.find(x => x.id === to);
+            setMsg(`「${unit.name}」を ${t ? t.name : ''} に移しました`);
+          },
+        }, data.themes.map(t => h('option', { key: t.id, value: t.id }, t.name)))
+      ),
+      h('button', { className: 'xl-btn', onClick: addQuestion }, '＋ 問題を追加'),
+      newUnitForm,
+      confirmDelete
+        ? h('div', { className: 'flex items-center gap-2' },
+            h('span', { style: { fontSize: '12px', color: '#a11' } }, `「${unit.name}」を記録・写真ごと削除します`),
+            h('button', { className: 'xl-btn', style: { background: '#a11', borderColor: '#800' }, onClick: deleteUnit }, '削除する'),
+            h('button', { className: 'xl-btn xl-btn-sub', onClick: () => setConfirmDelete(false) }, 'やめる')
+          )
+        : h('button', { className: 'xl-btn xl-btn-sub', style: { color: '#a11' }, onClick: () => setConfirmDelete(true) }, 'この単元を削除')
+    ),
+
+    h('div', { className: 'xl-msg' },
+      '「＋ 問題を追加」で空の問題が増えます。その行にURLを貼るか、写真を貼れば登録できます（どちらか片方だけでも可）。'
+      + '写真は1問に何枚でも入ります（「＋」を押してから Ctrl+V で追加）。'
+      + 'この画面で Ctrl+V すると、コピーしたURLはまとめて行になり、スクリーンショットは写真がまだ無い問題に上から順に入ります。'
+      + '左端の番号をつまむと、ドラッグで問題の順番を入れ替えられます。'
+    ),
+
+    pasteTarget && h('div', { className: 'xl-target' },
+      `問題 ${unit.questions.findIndex(q => q.id === pasteTarget) + 1} に貼り付けます。Ctrl+V を押してください。（もう一度ボタンを押すと解除）`),
+
+    h(QuestionSheet, {
+      questions: unit ? unit.questions : [], data,
+      onSetUrl: setUrl,
+      onSetCount: (qid, field, value) => setCountFor(qid, field, value, setData),
+      onOpenPhoto: onShowPhoto,
+      onPickPhoto: qid => setPasteTarget(pasteTarget === qid ? null : qid),
+      pasteTarget,
+      onDeleteRow: deleteRow,
+      onDuplicate: duplicateQuestion,
+      onReorder: reorder,
+      scrollSignal,
+      emptyText: 'まだ問題がありません。「＋ 問題を追加」を押すか、URLをまとめて貼り付けてください。',
+    }),
+
+    h('div', { style: { background: '#fff', borderTop: '1px solid #d9d9d9', padding: '12px' } },
+      h('div', { className: 'flex gap-4 items-start' },
+        h('div', { style: { flex: '1 1 0' } },
+          h('label', { className: 'xl-label' }, 'URLをまとめて貼り付け（1行1件・まとめて問題になります）'),
+          h('textarea', {
+            className: 'xl-input', value: urlText, rows: 4,
+            style: { width: '100%', fontFamily: 'ui-monospace, monospace', fontSize: '12px' },
+            placeholder: 'https://www.fe-siken.com/...\nhttps://www.fe-siken.com/...',
+            onChange: e => setUrlText(e.target.value)
+          }),
+          h('div', { className: 'flex items-center gap-3', style: { marginTop: '6px' } },
+            h('button', {
+              className: 'xl-btn',
+              onClick: () => {
+                const added = addFromUrls(parseUrls(urlText));
+                setMsg(added ? `${added}件のURLを追加しました` : '追加できるURLがありませんでした');
+                if (added) setUrlText('');
+              }
+            }, '追加する'),
+            h('span', { style: { fontSize: '12px', color: '#666' } }, `読み取れたURL: ${parseUrls(urlText).length}件`)
+          )
+        ),
+        h('div', { style: { flex: '1 1 0' } },
+          h('label', { className: 'xl-label' }, '写真をまとめて貼り付け'),
+          h(PhotoDropZone, {
+            label: '複数枚まとめてドラッグ＆ドロップ、またはこの画面で Ctrl+V。写真がまだ無い問題に上から順に割り当てます。',
+            multiple: true,
+            onImages: files => assignPhotos(unit.questions.map(q => q.id), data.photos, files, setData).then(setMsg),
+          })
+        )
+      )
+    ),
+
+    h(TransferPanel, { data, setData, setMsg, sel }),
+
+    h('div', { className: 'xl-status' },
+      `${theme ? theme.name : '-'} ／ ${unit ? unit.name : '-'} ｜ ${unit ? unit.questions.length : 0}問 ｜ URLあり ${withUrl}問 ｜ 写真あり ${withPhoto}問（計${photoCount}枚）`)
+  );
+}
+
+// ── データの持ち運び（ZIPで書き出し／読み込み）───────────────────────────────
+// 中身は data.json（テーマ・単元・問題・記録・カレンダー）と photos/ の画像。
+// ネットには何も送らない。ファイルを自分で運ぶ方式。
+
+function dataUrlToBlob(dataUrl) {
+  const [head, b64] = String(dataUrl).split(',');
+  const mime = (head.match(/:(.*?);/) || [])[1] || 'image/jpeg';
+  const bin = atob(b64 || '');
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+// テーマを1つだけ書き出すこともできる（全部入りは重くなるため）
+function sliceData(data, themeId) {
+  if (!themeId) return data;
+  const themes = data.themes.filter(t => t.id === themeId);
+  const units = data.units.filter(u => u.themeId === themeId);
+  const ids = new Set(units.flatMap(u => u.questions.map(q => q.id)));
+  const records = {};
+  const photos = {};
+  Object.keys(data.records).forEach(k => { if (ids.has(k)) records[k] = data.records[k]; });
+  Object.keys(data.photos).forEach(k => { if (ids.has(k)) photos[k] = photoIdsOf(data.photos, k); });
+  return { themes, units, records, photos, calendar: data.calendar };
+}
+
+async function exportZip(data, themeId) {
+  if (typeof JSZip === 'undefined') throw new Error('ZIPの部品を読み込めませんでした（通信をご確認ください）');
+  const slice = sliceData(data, themeId);
+  const zip = new JSZip();
+  zip.file('data.json', JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), data: slice }, null, 1));
+  const folder = zip.folder('photos');
+  let count = 0;
+  for (const qid of Object.keys(slice.photos)) {
+    for (const pid of photoIdsOf(slice.photos, qid)) {
+      const full = await loadPhoto(pid);
+      if (!full) continue;
+      folder.file(`${pid}.jpg`, dataUrlToBlob(full));
+      const thumb = await loadThumb(pid);
+      if (thumb) folder.file(`${pid}.thumb.jpg`, dataUrlToBlob(thumb));
+      count++;
+    }
+  }
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } });
+  // ファイル名に日本語を入れると、ブラウザによっては名前ごと落ちて拡張子も消える（＝読み込めない）
+  const themeName = themeId ? (slice.themes[0] || {}).name || '' : '';
+  const ascii = themeName.replace(/[^A-Za-z0-9]+/g, '').slice(0, 20);
+  const label = themeId
+    ? (ascii || `theme${Math.max(1, data.themes.findIndex(t => t.id === themeId) + 1)}`)
+    : 'all';
+  const stamp = todayStr().replace(/-/g, '');
+  return {
+    blob,
+    filename: `kakomon_${label}_${stamp}.zip`,
+    photoCount: count,
+    label: themeName || 'すべて',
+  };
+}
+
+// claude.ai の公開ページは zip を保存できない（許可された拡張子に無い）ので、
+// その場ではJSONに写真を埋め込んで書き出す。GitHub Pages など通常のサイトではZIPを使う。
+async function exportJson(data, themeId) {
+  const slice = sliceData(data, themeId);
+  const images = {};
+  let count = 0;
+  for (const qid of Object.keys(slice.photos)) {
+    for (const pid of photoIdsOf(slice.photos, qid)) {
+      const full = await loadPhoto(pid);
+      if (!full) continue;
+      images[pid] = { full, thumb: await loadThumb(pid) };
+      count++;
+    }
+  }
+  const themeName = themeId ? (slice.themes[0] || {}).name || '' : '';
+  const ascii = themeName.replace(/[^A-Za-z0-9]+/g, '').slice(0, 20);
+  const label = themeId
+    ? (ascii || `theme${Math.max(1, data.themes.findIndex(t => t.id === themeId) + 1)}`)
+    : 'all';
+  const text = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), data: slice, images });
+  return {
+    blob: new Blob([text], { type: 'application/json' }),
+    filename: `kakomon_${label}_${todayStr().replace(/-/g, '')}.json`,
+    photoCount: count,
+    label: themeName || 'すべて',
+  };
+}
+
+// 公開ページの中で動いているか（ここでは保存の仕組みが違う）
+function artifactDownloads() {
+  const c = typeof window !== 'undefined' ? window.claude : null;
+  return c && typeof c.use === 'function' ? c.use('downloads') : Promise.resolve(null);
+}
+
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function readBackup(file) {
+  const name = String(file.name || '').toLowerCase();
+  if (name.endsWith('.json') || file.type === 'application/json') {
+    const parsed = JSON.parse(await file.text());
+    return { incoming: migrate(parsed.data || parsed), images: parsed.images || {} };
+  }
+  return readZip(file);
+}
+
+async function readZip(file) {
+  if (typeof JSZip === 'undefined') throw new Error('ZIPの部品を読み込めませんでした（通信をご確認ください）');
+  const zip = await JSZip.loadAsync(file);
+  const entry = zip.file('data.json');
+  if (!entry) throw new Error('このZIPにはデータが入っていません（data.json が見つかりません）');
+  const parsed = JSON.parse(await entry.async('string'));
+  const incoming = migrate(parsed.data || parsed);
+  const images = {}; // 写真ID → { full, thumb }
+  const files = zip.folder('photos');
+  if (files) {
+    const jobs = [];
+    files.forEach((path, f) => {
+      if (f.dir) return;
+      const m = path.match(/^(.+?)(\.thumb)?\.jpg$/);
+      if (!m) return;
+      jobs.push(f.async('blob').then(async b => {
+        const url = await blobToDataUrl(b);
+        images[m[1]] = images[m[1]] || {};
+        images[m[1]][m[2] ? 'thumb' : 'full'] = url;
+      }));
+    });
+    await Promise.all(jobs);
+  }
+  return { incoming, images };
+}
+
+// 取り込んだデータのIDを全部振り直す。今あるデータとぶつからないようにするため
+function remapIds(incoming, images) {
+  const themeMap = {}, unitMap = {}, qMap = {}, pMap = {};
+  const themes = incoming.themes.map(t => {
+    const id = newThemeId() + Math.random().toString(36).slice(2, 6);
+    themeMap[t.id] = id;
+    return { ...t, id };
+  });
+  const units = incoming.units.map(u => {
+    const id = `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    unitMap[u.id] = id;
+    return {
+      ...u, id, themeId: themeMap[u.themeId] || (themes[0] || {}).id,
+      questions: u.questions.map(q => {
+        const qid = newQuestionId() + Math.random().toString(36).slice(2, 4);
+        qMap[q.id] = qid;
+        return { ...q, id: qid };
+      }),
+    };
+  });
+  const records = {};
+  Object.keys(incoming.records || {}).forEach(k => { if (qMap[k]) records[qMap[k]] = incoming.records[k]; });
+  const photos = {};
+  const remappedImages = {};
+  Object.keys(incoming.photos || {}).forEach(k => {
+    if (!qMap[k]) return;
+    photos[qMap[k]] = photoIdsOf(incoming.photos, k).map(pid => {
+      const np = newPhotoId() + Math.random().toString(36).slice(2, 4);
+      pMap[pid] = np;
+      if (images[pid]) remappedImages[np] = images[pid];
+      return np;
+    });
+  });
+  return { themes, units, records, photos, calendar: incoming.calendar || {}, images: remappedImages };
+}
+
+async function storeImages(images) {
+  for (const pid of Object.keys(images)) {
+    const { full, thumb } = images[pid];
+    if (!full) continue;
+    await photoTx('readwrite', st => { st.put(full, pid); return st.put(thumb || full, pid + THUMB_SUFFIX); });
+  }
+}
+
+// ── 持ち運びの操作パネル ───────────────────────────────────────────────────────
+function TransferPanel({ data, setData, setMsg, sel }) {
+  const [busy, setBusy] = useState('');
+  const [pending, setPending] = useState(null); // 読み込んだ中身の確認待ち
+  const [scope, setScope] = useState('');       // '' は全部
+
+  async function doExport() {
+    setBusy('書き出し中…');
+    try {
+      const dl = await artifactDownloads();
+      const out = dl ? await exportJson(data, scope || null) : await exportZip(data, scope || null);
+      const size = `${Math.round(out.blob.size / 1024 / 1024 * 10) / 10}MB`;
+      if (dl) {
+        await dl.save({ filename: out.filename, data: out.blob });
+        setMsg(`「${out.label}」を書き出しました（写真${out.photoCount}枚・${size}）　ファイル名: ${out.filename}`);
+      } else {
+        saveBlob(out.blob, out.filename);
+        setMsg(`「${out.label}」を書き出しました（写真${out.photoCount}枚・${size}）　ファイル名: ${out.filename}`);
+      }
+    } catch (e) {
+      const code = e && e.code;
+      setMsg(code === 'declined' ? '保存を取り消しました'
+        : code ? `書き出せませんでした（${code}）`
+        : '書き出せませんでした: ' + (e && e.message ? e.message : e));
+    }
+    setBusy('');
+  }
+
+  async function pickFile(file) {
+    if (!file) return;
+    setBusy('読み込み中…');
+    try {
+      const { incoming, images } = await readBackup(file);
+      setPending({
+        ...remapIds(incoming, images),
+        summary: {
+          themes: incoming.themes.length,
+          units: incoming.units.length,
+          questions: incoming.units.reduce((n, u) => n + u.questions.length, 0),
+          photos: Object.keys(images).length,
+          days: Object.keys(incoming.calendar || {}).length,
+        },
+      });
+      setMsg('');
+    } catch (e) {
+      setMsg('読み込めませんでした: ' + (e && e.message ? e.message : e));
+    }
+    setBusy('');
+  }
+
+  async function apply(mode) {
+    if (!pending) return;
+    setBusy('取り込み中…');
+    try {
+      await storeImages(pending.images);
+      setData(d => mode === 'replace'
+        ? {
+            themes: pending.themes, units: pending.units,
+            records: pending.records, photos: pending.photos, calendar: pending.calendar,
+          }
+        : {
+            ...d,
+            themes: [...d.themes, ...pending.themes],
+            units: [...d.units, ...pending.units],
+            records: { ...d.records, ...pending.records },
+            photos: { ...d.photos, ...pending.photos },
+            calendar: { ...pending.calendar, ...d.calendar },
+          });
+      // 取り込んだテーマをそのまま開く（どこに入ったか分かるように）
+      if (sel && sel.setThemeId && pending.themes[0]) sel.setThemeId(pending.themes[0].id);
+      setMsg(mode === 'replace'
+        ? '読み込んだデータに置き換えました（Ctrl+Z で元に戻せます）'
+        : '今のデータに追加しました（Ctrl+Z で元に戻せます）');
+      setPending(null);
+    } catch (e) {
+      setMsg('取り込めませんでした: ' + (e && e.message ? e.message : e));
+    }
+    setBusy('');
+  }
+
+  const photoTotal = Object.keys(data.photos).reduce((n, k) => n + photoIdsOf(data.photos, k).length, 0);
+
+  return h('div', { style: { background: '#fff', borderTop: '1px solid #d9d9d9', padding: '12px' } },
+    h('div', { className: 'flex flex-wrap items-end gap-3' },
+      h('div', null,
+        h('label', { className: 'xl-label' }, '書き出す範囲'),
+        h('select', {
+          title: '書き出す範囲', value: scope, onChange: e => setScope(e.target.value), style: { minWidth: '200px' },
+        },
+          h('option', { value: '' }, `すべて（写真${photoTotal}枚）`),
+          data.themes.map(t => h('option', { key: t.id, value: t.id }, t.name))
+        )
+      ),
+      h('button', { className: 'xl-btn', onClick: doExport, disabled: !!busy }, '📦 書き出す'),
+      h('label', { className: 'xl-btn xl-btn-sub', style: { cursor: 'pointer' } },
+        '📂 ファイルを読み込む',
+        h('input', {
+          type: 'file', accept: '.zip,.json,application/zip,application/json', style: { display: 'none' },
+          onChange: e => { pickFile(e.target.files[0]); e.target.value = ''; },
+        })
+      ),
+      busy && h('span', { style: { fontSize: '12px', color: '#666' } }, busy),
+      h('span', { style: { fontSize: '12px', color: '#666' } },
+        '書き出したファイルをスマホに移して読み込むと、写真ごと持っていけます')
+    ),
+
+    pending && h('div', {
+      style: { marginTop: '10px', border: '1px solid #e0c96b', background: '#fff7d6', borderRadius: '3px', padding: '10px' },
+    },
+      h('div', { style: { fontSize: '13px', marginBottom: '8px' } },
+        `読み込んだ内容：テーマ${pending.summary.themes}件 ／ 単元${pending.summary.units}件 ／ 問題${pending.summary.questions}件 ／ 写真${pending.summary.photos}枚 ／ カレンダー${pending.summary.days}日`),
+      h('div', { className: 'flex flex-wrap gap-2' },
+        h('button', { className: 'xl-btn', onClick: () => apply('merge'), disabled: !!busy }, '今のデータに追加する'),
+        h('button', {
+          className: 'xl-btn', style: { background: '#a11', borderColor: '#800' },
+          onClick: () => apply('replace'), disabled: !!busy,
+        }, '今のデータを置き換える'),
+        h('button', { className: 'xl-btn xl-btn-sub', onClick: () => setPending(null), disabled: !!busy }, 'やめる')
+      )
+    )
+  );
+}
+
+// ── 過去問演習（出題／単元管理）────────────────────────────────────────────────
+function PracticeHub({ data, setData, onShowPhoto }) {
+  const [tab, setTab] = useState('draw');
+  const [msg, setMsg] = useState('');
+  // テーマと単元の選択はタブをまたいで保つ
+  const [themeId, setThemeId] = useState(data.themes[0] ? data.themes[0].id : '');
+  const [unitId, setUnitId] = useState('');
+
+  const theme = data.themes.find(t => t.id === themeId) || data.themes[0];
+  const unitsOfTheme = data.units.filter(u => u.themeId === (theme ? theme.id : ''));
+  const unit = unitsOfTheme.find(u => u.id === unitId) || unitsOfTheme[0];
+  const sel = {
+    theme, unitsOfTheme, unit,
+    setThemeId: id => { setThemeId(id); setUnitId(''); },
+    setUnitId,
+  };
+
+  useEffect(() => {
+    if (!msg) return;
+    const id = setTimeout(() => setMsg(''), 4000);
+    return () => clearTimeout(id);
+  }, [msg]);
+
+  return h('div', { className: 'px-6 py-6 pb-safe xl-pad' },
+    h('div', { className: 'flex items-center justify-between mb-3' },
+      h('div', { className: 'flex gap-1' },
+        h('button', {
+          onClick: () => setTab('draw'),
+          className: `text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors ${tab === 'draw' ? 'bg-gray-100 text-gray-900' : 'bg-gray-900 text-gray-400 hover:text-white'}`
+        }, '出題'),
+        h('button', {
+          onClick: () => setTab('units'),
+          className: `text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors ${tab === 'units' ? 'bg-gray-100 text-gray-900' : 'bg-gray-900 text-gray-400 hover:text-white'}`
+        }, '単元管理')
+      ),
+      msg && h('span', { className: 'text-xs text-green-300' }, msg)
+    ),
+    tab === 'draw'
+      ? h(DrawPage, { data, setData, onShowPhoto, setMsg, sel })
+      : h(UnitsPage, { data, setData, onShowPhoto, setMsg, sel })
+  );
+}
+
+// ── カレンダー（日付のマスに直接書き込む）────────────────────────────────────
+const WEEK_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+
+function CalendarPage({ data, setData }) {
+  const isPhone = useIsPhone();
+  const now = new Date();
+  const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() });
+  const [selected, setSelected] = useState(todayStr());
+
+  const first = new Date(cursor.y, cursor.m, 1);
+  const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < first.getDay(); i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const today = todayStr();
+  const monthPrefix = `${cursor.y}-${String(cursor.m + 1).padStart(2, '0')}`;
+  const writtenThisMonth = Object.keys(data.calendar)
+    .filter(k => k.startsWith(monthPrefix) && data.calendar[k]).length;
+
+  function moveMonth(delta) {
+    const d = new Date(cursor.y, cursor.m + delta, 1);
+    setCursor({ y: d.getFullYear(), m: d.getMonth() });
+  }
+  // マスに入力したそのまま保存する
+  function writeMemo(key, text) {
+    setData(d => {
+      const calendar = { ...d.calendar };
+      if (text) calendar[key] = text;
+      else delete calendar[key];
+      return { ...d, calendar };
+    });
+  }
+
+  return h('div', { className: 'px-6 py-6 pb-safe xl-pad' },
+    h('div', { className: 'xl-app' },
+      h('div', { className: 'xl-toolbar flex items-center gap-3' },
+        h('button', { className: 'xl-btn xl-btn-sub', onClick: () => moveMonth(-1) }, '◀'),
+        h('span', { style: { fontSize: '15px', fontWeight: 600, minWidth: '130px', textAlign: 'center' } },
+          `${cursor.y}年 ${cursor.m + 1}月`),
+        h('button', { className: 'xl-btn xl-btn-sub', onClick: () => moveMonth(1) }, '▶'),
+        h('button', {
+          className: 'xl-btn xl-btn-sub',
+          onClick: () => setCursor({ y: now.getFullYear(), m: now.getMonth() }),
+        }, '今日'),
+        h('span', { style: { fontSize: '12px', color: '#666', marginLeft: 'auto' } },
+          isPhone ? '日付をタップして下の欄に書きます' : 'マスをクリックしてそのまま書き込めます（自動で保存されます）')
+      ),
+
+      h('table', { className: 'cal-table' },
+        h('thead', null,
+          h('tr', null, WEEK_LABELS.map((w, i) => h('th', {
+            key: w,
+            style: { color: i === 0 ? '#c00000' : (i === 6 ? '#0070c0' : '#333') },
+          }, w)))
+        ),
+        h('tbody', null,
+          Array.from({ length: cells.length / 7 }, (_, wk) => h('tr', { key: wk },
+            cells.slice(wk * 7, wk * 7 + 7).map((d, dow) => {
+              if (d === null) return h('td', { key: dow, className: 'cal-out' });
+              const key = dateStr(cursor.y, cursor.m, d);
+              const memo = data.calendar[key] || '';
+              const cls = ['cal-cell',
+                key === today ? 'cal-today' : '',
+                dow === 0 ? 'cal-sun' : (dow === 6 ? 'cal-sat' : '')].filter(Boolean).join(' ');
+              return h('td', {
+                key: dow,
+                className: cls + (isPhone && key === selected ? ' cal-picked' : ''),
+                onClick: isPhone ? () => setSelected(key) : undefined,
+                style: isPhone && key === selected ? { outline: '2px solid #217346', outlineOffset: '-2px' } : undefined,
+              },
+                h('div', { className: 'cal-day' },
+                  h('span', null, d),
+                  !isPhone && key === today && h('span', { style: { fontSize: '10px' } }, '今日'),
+                  isPhone && memo && h('span', { className: 'cal-dot' })
+                ),
+                h('textarea', {
+                  className: 'cal-memo',
+                  value: memo,
+                  placeholder: '',
+                  onChange: e => writeMemo(key, e.target.value),
+                })
+              );
+            })
+          ))
+        )
+      ),
+
+      isPhone && h('div', { style: { background: '#fff', borderTop: '1px solid #d9d9d9', padding: '10px' } },
+        h('div', { style: { fontSize: '13px', fontWeight: 600, marginBottom: '6px' } },
+          `${selected} のメモ（入力すると自動で保存されます）`),
+        h('textarea', {
+          className: 'xl-input',
+          value: data.calendar[selected] || '',
+          style: { width: '100%', minHeight: '120px', fontSize: '16px' },
+          placeholder: '例）離散数学を20問。9/15までに応用数学を1周する。',
+          onChange: e => writeMemo(selected, e.target.value),
+        })
+      ),
+
+      h('div', { className: 'xl-status' },
+        `${cursor.y}年${cursor.m + 1}月 ｜ 書き込みのある日 ${writtenThisMonth}日`)
+    )
+  );
+}
+
+// ── ポモドーロタイマー ────────────────────────────────────────────────────────
+function PomodoroTimer() {
+  const randomStudy = () => (Math.floor(Math.random() * 16) + 10) * 60; // 10〜25分
+  const BREAK = 5 * 60;
+
+  const [isBreak, setIsBreak] = useState(false);
+  const [total, setTotal] = useState(randomStudy);
+  const [left, setLeft] = useState(() => randomStudy());
+  const [running, setRunning] = useState(false);
+  // スマホでは操作を隠してしまうので、最初は畳んでおく
+  const [open, setOpen] = useState(() => !(typeof matchMedia === 'function' && matchMedia('(max-width: 720px)').matches));
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!running) return;
+    ref.current = setInterval(() => {
+      setLeft(l => {
+        if (l <= 1) {
+          clearInterval(ref.current);
+          setRunning(false);
+          if (!isBreak) {
+            // 勉強終了 → 休憩へ
+            setIsBreak(true);
+            setTotal(BREAK);
+            setLeft(BREAK);
+            new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAA==').play().catch(()=>{});
+            if (Notification.permission === 'granted') new Notification('休憩時間！5分休みましょう☕');
+          } else {
+            // 休憩終了 → 勉強へ
+            const s = randomStudy();
+            setIsBreak(false);
+            setTotal(s);
+            setLeft(s);
+            if (Notification.permission === 'granted') new Notification('勉強再開！集中しよう📚');
+          }
+          return 0;
+        }
+        return l - 1;
+      });
+    }, 1000);
+    return () => clearInterval(ref.current);
+  }, [running, isBreak]);
+
+  const mm = String(Math.floor(left / 60)).padStart(2, '0');
+  const ss = String(left % 60).padStart(2, '0');
+  const pct = Math.round((1 - left / total) * 100);
+
+  function start() {
+    if (Notification.permission === 'default') Notification.requestPermission();
+    setRunning(true);
+  }
+  function reset() {
+    clearInterval(ref.current);
+    setRunning(false);
+    const s = randomStudy();
+    setIsBreak(false);
+    setTotal(s);
+    setLeft(s);
+  }
+
+  if (!open) {
+    return h('button', {
+      onClick: () => setOpen(true),
+      className: 'fixed bottom-4 right-4 bg-gray-900 border border-gray-700 rounded-full w-12 h-12 flex items-center justify-center text-xl shadow-lg hover:border-blue-500 transition-colors z-50'
+    }, '🍅');
+  }
+
+  return h('div', {
+    className: 'fixed bottom-4 right-4 bg-gray-900 border border-gray-700 rounded-2xl p-4 shadow-xl z-50 w-44'
+  },
+    // ヘッダー
+    h('div', { className: 'flex items-center justify-between mb-3' },
+      h('span', { className: `text-xs font-semibold ${isBreak ? 'text-green-400' : 'text-orange-400'}` },
+        isBreak ? '☕ 休憩中' : '📚 勉強中'
+      ),
+      h('button', { onClick: () => setOpen(false), className: 'text-gray-600 hover:text-gray-400 text-xs' }, '×')
+    ),
+
+    // 時間表示
+    h('div', { className: 'text-center mb-3' },
+      h('div', { className: `text-3xl font-mono font-bold ${isBreak ? 'text-green-400' : 'text-orange-400'}` },
+        `${mm}:${ss}`
+      ),
+      h('div', { className: 'text-xs text-gray-500 mt-1' },
+        isBreak ? '5分休憩' : `${Math.round(total/60)}分集中`
+      )
+    ),
+
+    // プログレスバー
+    h('div', { className: 'w-full bg-gray-800 rounded-full h-1.5 mb-3' },
+      h('div', {
+        className: `h-1.5 rounded-full transition-all ${isBreak ? 'bg-green-500' : 'bg-orange-500'}`,
+        style: { width: `${pct}%` }
+      })
+    ),
+
+    // ボタン
+    h('div', { className: 'flex gap-2' },
+      h('button', {
+        onClick: running ? () => { clearInterval(ref.current); setRunning(false); } : start,
+        className: `flex-1 text-xs py-1.5 rounded-lg font-semibold transition-colors ${
+          running
+            ? 'bg-gray-700 hover:bg-gray-600 text-white'
+            : 'bg-orange-600 hover:bg-orange-500 text-white'
+        }`
+      }, running ? '一時停止' : 'スタート'),
+      h('button', {
+        onClick: reset,
+        className: 'text-xs px-2 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 transition-colors'
+      }, 'リセット')
+    )
+  );
+}
+
+// ── アプリ本体 ────────────────────────────────────────────────────────────────
+const NAV_TABS = [
+  { id: 'practice', label: '🎲 過去問演習' },
+  { id: 'calendar', label: '📅 カレンダー' },
+];
+
+const UNDO_LIMIT = 50;
+
+function App() {
+  const isPhone = useIsPhone();
+  const [mode, setMode] = useState('practice');
+  const [data, setDataRaw] = useLocalStorageState(STORAGE_KEY, DEFAULT_DATA);
+  const [photoView, setPhotoView] = useState(null); // { qid, index }
+  const [history, setHistory] = useState({ undo: 0, redo: 0 });
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  // 変更のたびに直前の状態を積む。Excelの Ctrl+Z と同じ感覚で戻せるようにする
+  function setData(updater) {
+    setDataRaw(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (next === prev) return prev;
+      const stack = undoStack.current;
+      if (stack[stack.length - 1] !== prev) {
+        stack.push(prev);
+        const dropped = [];
+        while (stack.length > UNDO_LIMIT) dropped.push(stack.shift());
+        redoStack.current = [];
+        // 履歴から外れた分だけ、参照されなくなった画像を掃除する
+        if (dropped.length) {
+          gcPhotos([next, ...stack, ...redoStack.current].map(d => d.photos)).catch(() => {});
+        }
+        setHistory({ undo: stack.length, redo: 0 });
+      }
+      return next;
+    });
+  }
+
+  function undo() {
+    const prev = undoStack.current.pop();
+    if (!prev) return;
+    redoStack.current.push(dataRef.current);
+    setDataRaw(prev);
+    setPhotoView(null);
+    setHistory({ undo: undoStack.current.length, redo: redoStack.current.length });
+  }
+  function redo() {
+    const next = redoStack.current.pop();
+    if (!next) return;
+    undoStack.current.push(dataRef.current);
+    setDataRaw(next);
+    setPhotoView(null);
+    setHistory({ undo: undoStack.current.length, redo: redoStack.current.length });
+  }
+
+  useEffect(() => {
+    function onKey(e) {
+      const tag = e.target && e.target.tagName;
+      // 文字入力中は、そのまま入力欄の取り消しに任せる
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // 前回までに参照が切れた画像を、起動時に掃除する
+  useEffect(() => {
+    if (data && Array.isArray(data.units)) gcPhotos([data.photos]).catch(() => {});
+  }, []);
+
+  return h('div', { className: 'min-h-screen' },
+    h('div', { className: 'sticky top-0 z-40 bg-gray-950/90 backdrop-blur border-b border-gray-800' },
+      h('div', { className: 'px-6 xl-pad flex items-center gap-1 py-2' },
+        NAV_TABS.map(t => h('button', {
+          key: t.id,
+          onClick: () => setMode(t.id),
+          className: `text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${mode === t.id ? 'bg-blue-700 text-white' : 'text-gray-400 hover:text-white'}`
+        }, t.label)),
+        h('div', { className: 'flex items-center gap-1 ml-auto' },
+          h('button', {
+            onClick: undo, disabled: history.undo === 0, title: '元に戻す（Ctrl+Z）',
+            className: `text-xs px-3 py-1.5 rounded-lg border transition-colors ${history.undo ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-800 text-gray-600 cursor-not-allowed'}`
+          }, isPhone ? `↶${history.undo ? history.undo : ''}` : `↶ 元に戻す${history.undo ? `（${history.undo}）` : ''}`),
+          h('button', {
+            onClick: redo, disabled: history.redo === 0, title: 'やり直す（Ctrl+Y）',
+            className: `text-xs px-3 py-1.5 rounded-lg border transition-colors ${history.redo ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-800 text-gray-600 cursor-not-allowed'}`
+          }, isPhone ? `↷${history.redo ? history.redo : ''}` : `↷ やり直す${history.redo ? `（${history.redo}）` : ''}`)
+        )
+      )
+    ),
+    mode === 'practice'
+      ? h(PracticeHub, { data, setData, onShowPhoto: (qid, index) => setPhotoView({ qid, index: index || 0 }) })
+      : h(CalendarPage, { data, setData }),
+    photoView && (() => {
+      const qid = photoView.qid;
+      const unit = data.units.find(u => u.questions.some(q => q.id === qid));
+      const currentNo = unit ? unit.questions.findIndex(q => q.id === qid) + 1 : 0;
+      const ids = photoIdsOf(data.photos, qid);
+      return h(PhotoModal, {
+        ids,
+        index: Math.min(photoView.index, Math.max(0, ids.length - 1)),
+        onIndex: i => setPhotoView(v => ({ ...v, index: i })),
+        onClose: () => setPhotoView(null),
+        currentNo,
+        // 写真をそのまま別の問題へ移せるようにする（コピー＆ペーストを経由しないで済む）
+        moveTargets: unit
+          ? unit.questions.map((q, i) => ({ id: q.id, no: i + 1, text: q.url || '' })).filter(t => t.id !== qid)
+          : [],
+        currentText: unit ? (unit.questions.find(q => q.id === qid) || {}).url || '' : '',
+        onMove: (pid, toQid) => {
+          setData(d => {
+            const photos = { ...d.photos };
+            const rest = photoIdsOf(d.photos, qid).filter(x => x !== pid);
+            if (rest.length) photos[qid] = rest; else delete photos[qid];
+            photos[toQid] = [...photoIdsOf(d.photos, toQid), pid];
+            return { ...d, photos };
+          });
+          setPhotoView(null);
+        },
+        onDelete: pid => {
+          detachPhoto(qid, pid, setData).then(() => {
+            setPhotoView(v => {
+              const left = photoIdsOf(data.photos, qid).filter(x => x !== pid);
+              return left.length ? { qid, index: Math.min(v.index, left.length - 1) } : null;
+            });
+          });
+        },
+      });
+    })(),
+    h(PomodoroTimer)
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
