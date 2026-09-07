@@ -585,9 +585,46 @@ function useWindowPaste(active, handler) {
 // ── 問題ページをアプリの中で開く ─────────────────────────────────────────────
 // 相手のサイトが「他所への埋め込み」を断っていると中身が出ないことがあるので、
 // そのときのために必ず「新しいタブで開く」も添えておく。
+// 表示の大きさ。端末ごとに覚えておく（毎回合わせ直さなくて済むように）
+const ZOOM_KEY = 'feExamZoom';
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 1.5;
+
+function loadZoom() {
+  const v = Number(localStorage.getItem(ZOOM_KEY));
+  return v >= ZOOM_MIN && v <= ZOOM_MAX ? v : 1;
+}
+
 function LinkViewer({ url, no, record, onSetCount, onClose }) {
   const [loaded, setLoaded] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [zoom, setZoom] = useState(() => { try { return loadZoom(); } catch { return 1; } });
+  // 枠の実寸。縮小したぶん中のページを広く描き、全体を縮めて収める。
+  const boxRef = useRef(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    function measure() {
+      const el = boxRef.current;
+      if (!el) return;
+      const b = el.getBoundingClientRect();
+      setSize(prev => (Math.abs(prev.w - b.width) < 0.5 && Math.abs(prev.h - b.height) < 0.5)
+        ? prev : { w: b.width, h: b.height });
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('orientationchange', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('orientationchange', measure);
+    };
+  }, []);
+
+  function changeZoom(next) {
+    const v = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(next * 10) / 10));
+    setZoom(v);
+    try { localStorage.setItem(ZOOM_KEY, String(v)); } catch {}
+  }
 
   useEffect(() => {
     setLoaded(false);
@@ -623,10 +660,24 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
         onChange: e => onSetCount('wrong', Number(e.target.value)),
         className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
       }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
+      h('span', { style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' } },
+        h('button', {
+          onClick: () => changeZoom(zoom - 0.1), disabled: zoom <= ZOOM_MIN, title: '表示を小さくする',
+          className: 'text-sm px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
+        }, '−'),
+        h('button', {
+          onClick: () => changeZoom(1), title: '表示の大きさを元に戻す',
+          className: 'text-xs px-2 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-300',
+          style: { minWidth: '52px' },
+        }, `${Math.round(zoom * 100)}%`),
+        h('button', {
+          onClick: () => changeZoom(zoom + 0.1), disabled: zoom >= ZOOM_MAX, title: '表示を大きくする',
+          className: 'text-sm px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
+        }, '＋')
+      ),
       h('a', {
         href: url, target: '_blank', rel: 'noopener noreferrer',
         className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
-        style: { marginLeft: 'auto' },
       }, '新しいタブで開く ↗'),
       h('button', {
         onClick: onClose, title: '閉じる（Esc）',
@@ -634,10 +685,21 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
       }, '閉じる ×')
     ),
 
-    h('div', { style: { flex: '1 1 auto', position: 'relative', background: '#fff' } },
-      h('iframe', {
-        src: url, title: `問題 ${no}`, onLoad: () => setLoaded(true),
-        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 },
+    h('div', {
+      ref: boxRef,
+      // iOSでは枠を指定しても中身の大きさまで広がってしまうので、外側でスクロールさせる
+      style: {
+        flex: '1 1 auto', position: 'relative', background: '#fff',
+        overflow: 'auto', WebkitOverflowScrolling: 'touch',
+      },
+    },
+      size.w > 0 && h('iframe', {
+        src: url, title: `問題 ${no}`, onLoad: () => setLoaded(true), scrolling: 'yes',
+        style: {
+          border: 0, display: 'block',
+          width: `${size.w / zoom}px`, height: `${size.h / zoom}px`,
+          transform: `scale(${zoom})`, transformOrigin: 'top left',
+        },
       }),
       !loaded && slow && h('div', {
         className: 'text-sm text-gray-700',
