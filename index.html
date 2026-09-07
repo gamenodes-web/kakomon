@@ -1972,11 +1972,33 @@ function TransferPanel({ data, setData, setMsg, sel }) {
     setBusy('');
   }
 
+  // 追加のとき、同じ名前のテーマは1つにまとめる。
+  // まとめないと、同じテーマの分を取り込むたびにテーマが増えてしまう。
+  function mergeInto(current) {
+    const byName = new Map(current.themes.map(t => [String(t.name).trim(), t.id]));
+    const idMap = {};
+    const addThemes = [];
+    pending.themes.forEach(t => {
+      const key = String(t.name).trim();
+      const hit = byName.get(key);
+      if (hit) { idMap[t.id] = hit; return; }
+      addThemes.push(t);
+      byName.set(key, t.id);
+    });
+    const units = pending.units.map(u => (idMap[u.themeId] ? { ...u, themeId: idMap[u.themeId] } : u));
+    const first = pending.themes[0];
+    return {
+      addThemes, units, mergedCount: Object.keys(idMap).length,
+      focusThemeId: first ? (idMap[first.id] || first.id) : '',
+    };
+  }
+
   async function apply(mode) {
     if (!pending) return;
     setBusy('取り込み中…');
     try {
       await storeImages(pending.images);
+      const plan = mode === 'replace' ? null : mergeInto(data);
       setData(d => mode === 'replace'
         ? {
             themes: pending.themes, units: pending.units,
@@ -1984,17 +2006,20 @@ function TransferPanel({ data, setData, setMsg, sel }) {
           }
         : {
             ...d,
-            themes: [...d.themes, ...pending.themes],
-            units: [...d.units, ...pending.units],
+            themes: [...d.themes, ...plan.addThemes],
+            units: [...d.units, ...plan.units],
             records: { ...d.records, ...pending.records },
             photos: { ...d.photos, ...pending.photos },
             calendar: { ...pending.calendar, ...d.calendar },
           });
       // 取り込んだテーマをそのまま開く（どこに入ったか分かるように）
-      if (sel && sel.setThemeId && pending.themes[0]) sel.setThemeId(pending.themes[0].id);
+      const focus = mode === 'replace' ? (pending.themes[0] || {}).id : plan.focusThemeId;
+      if (sel && sel.setThemeId && focus) sel.setThemeId(focus);
       setMsg(mode === 'replace'
         ? '読み込んだデータに置き換えました（Ctrl+Z で元に戻せます）'
-        : '今のデータに追加しました（Ctrl+Z で元に戻せます）');
+        : `今のデータに追加しました（単元${pending.units.length}件`
+          + (plan.mergedCount ? `／同じ名前のテーマ${plan.mergedCount}件はまとめました` : '')
+          + '）　Ctrl+Z で元に戻せます');
       setPending(null);
     } catch (e) {
       setMsg('取り込めませんでした: ' + (e && e.message ? e.message : e));
