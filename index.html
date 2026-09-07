@@ -60,7 +60,7 @@
   .xl-dragging td { opacity:.4; }
   .xl-drop-before td { box-shadow:inset 0 2px 0 0 #217346; }
   .xl-drop-after td { box-shadow:inset 0 -2px 0 0 #217346; }
-  .xl-link { color:#1155cc; text-decoration:none; }
+  .xl-link { color:#1155cc; text-decoration:none; font-family:inherit; font-size:13px; padding:0; }
   .xl-link:hover { text-decoration:underline; }
   .xl-url { flex:1 1 auto; min-width:0; border:1px solid transparent; background:transparent; font-family:inherit; font-size:13px; color:#1f2328; padding:3px 4px; border-radius:2px; }
   .xl-url:hover { border-color:#c4c4c4; background:#fff; }
@@ -120,8 +120,9 @@
     .q-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
     .q-no { font-weight: 700; font-size: 15px; color: #1f2328; }
     .q-open {
-      display: block; text-align: center; background: #eef4ff; border: 1px solid #b6cdf5;
+      display: block; width: 100%; text-align: center; background: #eef4ff; border: 1px solid #b6cdf5;
       color: #1155cc; border-radius: 4px; padding: 12px; font-size: 15px; margin: 8px 0; text-decoration: none;
+      font-family: inherit; cursor: pointer;
     }
     .q-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
     .q-row label { font-size: 13px; color: #555; }
@@ -146,6 +147,20 @@ const { useState, useEffect, useRef, createElement: h } = React;
 
 // ── データ保存（文字データ: localStorage、画像: IndexedDB）─────────────────
 const STORAGE_KEY = 'feExamData';
+// 出題中の状態（選んだ単元・条件・抽選結果）。問題を解いて戻ってきても消えないように残す。
+// 取り消し履歴には乗せたくないので、問題データ本体とは別に保存する。
+const DRAW_KEY = 'feExamDraw';
+
+function loadDraw() {
+  try {
+    const raw = localStorage.getItem(DRAW_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveDraw(state) {
+  try { localStorage.setItem(DRAW_KEY, JSON.stringify(state)); } catch {}
+}
 // 最初に開いたときの中身。送ってもらった単元マスタ（単元名・m・s・問題数）から
 // URLを組み立てて入れてある。単元管理タブで削除・追加・貼り替えができる。
 const SEED_UNITS = [
@@ -567,6 +582,73 @@ function useWindowPaste(active, handler) {
   }, [active]);
 }
 
+// ── 問題ページをアプリの中で開く ─────────────────────────────────────────────
+// 相手のサイトが「他所への埋め込み」を断っていると中身が出ないことがあるので、
+// そのときのために必ず「新しいタブで開く」も添えておく。
+function LinkViewer({ url, no, record, onSetCount, onClose }) {
+  const [loaded, setLoaded] = useState(false);
+  const [slow, setSlow] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+    setSlow(false);
+    const id = setTimeout(() => setSlow(true), 5000);
+    return () => clearTimeout(id);
+  }, [url]);
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return h('div', {
+    style: { zIndex: 55, display: 'flex', flexDirection: 'column' },
+    className: 'fixed inset-0 bg-gray-950',
+  },
+    h('div', {
+      style: { flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '8px 10px' },
+      className: 'bg-gray-900 border-b border-gray-700',
+    },
+      h('span', { className: 'text-xs text-gray-300', style: { fontWeight: 600 } }, `問題 ${no}`),
+      onSetCount && h('span', { className: 'text-xs text-gray-400' }, '正解'),
+      onSetCount && h('select', {
+        title: '正解回数', value: record.correct,
+        onChange: e => onSetCount('correct', Number(e.target.value)),
+        className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
+      }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
+      onSetCount && h('span', { className: 'text-xs text-gray-400' }, '不正解'),
+      onSetCount && h('select', {
+        title: '不正解回数', value: record.wrong,
+        onChange: e => onSetCount('wrong', Number(e.target.value)),
+        className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
+      }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
+      h('a', {
+        href: url, target: '_blank', rel: 'noopener noreferrer',
+        className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
+        style: { marginLeft: 'auto' },
+      }, '新しいタブで開く ↗'),
+      h('button', {
+        onClick: onClose, title: '閉じる（Esc）',
+        className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
+      }, '閉じる ×')
+    ),
+
+    h('div', { style: { flex: '1 1 auto', position: 'relative', background: '#fff' } },
+      h('iframe', {
+        src: url, title: `問題 ${no}`, onLoad: () => setLoaded(true),
+        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 },
+      }),
+      !loaded && slow && h('div', {
+        className: 'text-sm text-gray-700',
+        style: {
+          position: 'absolute', left: 0, right: 0, top: '40%', textAlign: 'center', padding: '0 16px',
+        },
+      }, 'このページはアプリの中では表示できないようです。上の「新しいタブで開く」を使ってください。')
+    )
+  );
+}
+
 // ── 写真のトリミング（拡大表示の中で使う）─────────────────────────────────────
 // 選択範囲は「表示中の画像に対する割合」で持つ。画面の大きさが変わっても同じ場所を指す。
 const MIN_CROP = 0.03;   // これより細い選択は切り取らせない
@@ -880,7 +962,7 @@ function PhotoCell({ pids, isTarget, onOpen, onPick }) {
 // ── 問題の表（Excelのシート相当）──────────────────────────────────────────────
 function QuestionSheet({
   questions, nos, data, onSetUrl, onSetCount, onOpenPhoto, onPickPhoto,
-  pasteTarget, onDeleteRow, onDuplicate, onReorder, scrollSignal, emptyText,
+  pasteTarget, onDeleteRow, onDuplicate, onReorder, scrollSignal, emptyText, onOpenLink,
 }) {
   const isPhone = useIsPhone();
   const scroller = useRef(null);
@@ -939,7 +1021,9 @@ function QuestionSheet({
               })
             : null,
           q.url
-            ? h('a', { className: 'q-open', href: q.url, target: '_blank', rel: 'noopener noreferrer' }, '問題を開く →')
+            ? (onOpenLink
+                ? h('button', { className: 'q-open', onClick: () => onOpenLink(q.id) }, '問題を開く →')
+                : h('a', { className: 'q-open', href: q.url, target: '_blank', rel: 'noopener noreferrer' }, '問題を開く →'))
             : (onSetUrl ? null : h('div', { style: { color: '#999', fontSize: '13px', margin: '6px 0' } }, '（URLなし）')),
 
           h('div', { className: 'q-row' },
@@ -1025,10 +1109,16 @@ function QuestionSheet({
                   })
                 : h('span', { style: { flex: '1 1 auto', color: q.url ? '#1f2328' : '#999' } }, q.url || '（URLなし）'),
               q.url
-                ? h('a', {
-                    href: q.url, target: '_blank', rel: 'noopener noreferrer',
-                    className: 'xl-link', style: { flex: '0 0 auto' },
-                  }, '開く →')
+                ? (onOpenLink
+                    ? h('button', {
+                        onClick: () => onOpenLink(q.id),
+                        className: 'xl-link', style: { flex: '0 0 auto', background: 'none', border: 0, cursor: 'pointer' },
+                        title: 'アプリの中で開く',
+                      }, '開く →')
+                    : h('a', {
+                        href: q.url, target: '_blank', rel: 'noopener noreferrer',
+                        className: 'xl-link', style: { flex: '0 0 auto' },
+                      }, '開く →'))
                 : null
             )),
             h('td', null, h('div', { className: 'xl-cell', style: { padding: '2px 6px' } },
@@ -1067,23 +1157,45 @@ function QuestionSheet({
 }
 
 // ── 出題ページ ────────────────────────────────────────────────────────────────
-function DrawPage({ data, setData, onShowPhoto, setMsg, sel }) {
+function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
   const { theme, unitsOfTheme, unit, setThemeId, setUnitId } = sel;
-  const [filterCorrect, setFilterCorrect] = useState('');
-  const [filterWrong, setFilterWrong] = useState('');
-  const [count, setCount] = useState(5);
-  const [rangeStart, setRangeStart] = useState(1);
-  const [rangeEnd, setRangeEnd] = useState(0); // 0 は「最後まで」
-  const [results, setResults] = useState([]);
+  // 前回の続きから始められるように、条件と抽選結果を読み戻す（同じ単元のときだけ）
+  const saved = useRef(loadDraw());
+  const prev = saved.current && unit && saved.current.unitId === unit.id ? saved.current : null;
+  const [filterCorrect, setFilterCorrect] = useState(prev ? (prev.filterCorrect || '') : '');
+  const [filterWrong, setFilterWrong] = useState(prev ? (prev.filterWrong || '') : '');
+  const [count, setCount] = useState(prev && prev.count ? prev.count : 5);
+  const [rangeStart, setRangeStart] = useState(prev && prev.rangeStart ? prev.rangeStart : 1);
+  const [rangeEnd, setRangeEnd] = useState(prev ? (prev.rangeEnd || 0) : 0); // 0 は「最後まで」
+  // 抽選結果は問題のIDだけを持つ（並べ替えやURLの変更にそのまま追随する）
+  const [results, setResults] = useState(() => {
+    if (!prev || !unit) return [];
+    const ids = new Set(unit.questions.map(q => q.id));
+    return (prev.results || []).filter(id => ids.has(id));
+  });
   const [pasteTarget, setPasteTarget] = useState(null);
 
   const total = unit ? unit.questions.length : 0;
   const endNo = rangeEnd > 0 ? Math.min(rangeEnd, total) : total;
 
-  // 単元を変えたら、Excelと同じく範囲は 1〜問題数 に戻す
+  // 単元を変えたら、Excelと同じく範囲は 1〜問題数 に戻す。
+  // 開き直した直後は「前回の続き」なので消さない。
+  const shownUnit = useRef(unit ? unit.id : '');
   useEffect(() => {
+    const id = unit ? unit.id : '';
+    if (shownUnit.current === id) return;
+    shownUnit.current = id;
     setResults([]); setPasteTarget(null); setRangeStart(1); setRangeEnd(0);
   }, [unit ? unit.id : '']);
+
+  // 開いている単元と条件、抽選結果を覚えておく
+  useEffect(() => {
+    if (!unit) return;
+    saveDraw({
+      themeId: theme ? theme.id : '', unitId: unit.id,
+      rangeStart, rangeEnd, filterCorrect, filterWrong, count, results,
+    });
+  }, [theme ? theme.id : '', unit ? unit.id : '', rangeStart, rangeEnd, filterCorrect, filterWrong, count, results]);
 
   useWindowPaste(!!pasteTarget, clipboard => {
     const files = imageFilesFrom(clipboard, true);
@@ -1112,6 +1224,14 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel }) {
     if (filterWrong !== '' && r.wrong !== Number(filterWrong)) return false;
     return true;
   }) : [];
+
+  // 覚えているのはIDだけなので、表示のたびに今の問題と番号を引き直す
+  const shown = results
+    .map(id => {
+      const i = unit.questions.findIndex(q => q.id === id);
+      return i < 0 ? null : { q: unit.questions[i], no: i + 1 };
+    })
+    .filter(Boolean);
 
   const filterClass = 'bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white';
 
@@ -1167,32 +1287,32 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel }) {
       h('button', {
         className: 'xl-btn',
         disabled: pool.length === 0,
-        onClick: () => { setResults(sample(pool, count)); setPasteTarget(null); }
+        onClick: () => { setResults(sample(pool, count).map(item => item.q.id)); setPasteTarget(null); }
       }, results.length ? '🎲 再抽選' : '🎲 抽選する')
     ),
 
     pasteTarget && h('div', { className: 'xl-target' }, '写真の貼り付け先を選択中です。Ctrl+V で貼り付けてください。'),
 
-    results.length === 0
+    shown.length === 0
       ? h('div', { className: 'xl-empty' }, '「抽選する」を押すと、条件に合う問題からランダムに出題します。')
       : h(QuestionSheet, {
-          questions: results.map(r => r.q), nos: results.map(r => r.no), data,
+          questions: shown.map(r => r.q), nos: shown.map(r => r.no), data,
           onSetCount: (qid, field, value) => setCountFor(qid, field, value, setData),
           onOpenPhoto: onShowPhoto,
           onPickPhoto: qid => setPasteTarget(pasteTarget === qid ? null : qid),
-          pasteTarget,
+          pasteTarget, onOpenLink,
         }),
 
     h('div', { className: 'xl-status' },
       `${theme ? theme.name : '-'} ／ ${unit ? unit.name : '-'} ｜ 全${total}問 ｜ 出題範囲 ${rangeStart}〜${endNo} ｜ 条件に合う問題 ${pool.length}問`
-      + (results.length ? ` ｜ 出題中 ${results.length}問` : '')
+      + (shown.length ? ` ｜ 出題中 ${shown.length}問` : '')
       + (pool.length > 0 && pool.length < count ? `　※条件に合うのが${pool.length}問しかないため、${pool.length}問だけ出題します` : '')
     )
   );
 }
 
 // ── 単元管理ページ ────────────────────────────────────────────────────────────
-function UnitsPage({ data, setData, onShowPhoto, setMsg, sel }) {
+function UnitsPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
   const { theme, unitsOfTheme, unit, setThemeId, setUnitId } = sel;
   const [pasteTarget, setPasteTarget] = useState(null);
   const [urlText, setUrlText] = useState('');
@@ -1505,7 +1625,7 @@ function UnitsPage({ data, setData, onShowPhoto, setMsg, sel }) {
       onDeleteRow: deleteRow,
       onDuplicate: duplicateQuestion,
       onReorder: reorder,
-      scrollSignal,
+      scrollSignal, onOpenLink,
       emptyText: 'まだ問題がありません。「＋ 問題を追加」を押すか、URLをまとめて貼り付けてください。',
     }),
 
@@ -1867,9 +1987,16 @@ function TransferPanel({ data, setData, setMsg, sel }) {
 function PracticeHub({ data, setData, onShowPhoto }) {
   const [tab, setTab] = useState('draw');
   const [msg, setMsg] = useState('');
+  const [linkView, setLinkView] = useState(null); // アプリの中で開いている問題
+  // 前に開いていた単元をそのまま開き直す（毎回選び直さなくて済むように）
+  const restored = useRef(loadDraw());
   // テーマと単元の選択はタブをまたいで保つ
-  const [themeId, setThemeId] = useState(data.themes[0] ? data.themes[0].id : '');
-  const [unitId, setUnitId] = useState('');
+  const [themeId, setThemeId] = useState(() => {
+    const r = restored.current;
+    if (r && r.themeId && data.themes.some(t => t.id === r.themeId)) return r.themeId;
+    return data.themes[0] ? data.themes[0].id : '';
+  });
+  const [unitId, setUnitId] = useState(() => (restored.current && restored.current.unitId) || '');
 
   const theme = data.themes.find(t => t.id === themeId) || data.themes[0];
   const unitsOfTheme = data.units.filter(u => u.themeId === (theme ? theme.id : ''));
@@ -1886,6 +2013,8 @@ function PracticeHub({ data, setData, onShowPhoto }) {
     return () => clearTimeout(id);
   }, [msg]);
 
+  const onOpenLink = qid => setLinkView({ qid });
+
   return h('div', { className: 'px-6 py-6 pb-safe xl-pad' },
     h('div', { className: 'flex items-center justify-between mb-3' },
       h('div', { className: 'flex gap-1' },
@@ -1901,8 +2030,21 @@ function PracticeHub({ data, setData, onShowPhoto }) {
       msg && h('span', { className: 'text-xs text-green-300' }, msg)
     ),
     tab === 'draw'
-      ? h(DrawPage, { data, setData, onShowPhoto, setMsg, sel })
-      : h(UnitsPage, { data, setData, onShowPhoto, setMsg, sel })
+      ? h(DrawPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink })
+      : h(UnitsPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink }),
+
+    linkView && (() => {
+      const u = data.units.find(x => x.questions.some(q => q.id === linkView.qid));
+      const i = u ? u.questions.findIndex(q => q.id === linkView.qid) : -1;
+      if (i < 0 || !u.questions[i].url) return null;
+      return h(LinkViewer, {
+        url: u.questions[i].url,
+        no: i + 1,
+        record: data.records[linkView.qid] || { correct: 0, wrong: 0 },
+        onSetCount: (field, value) => setCountFor(linkView.qid, field, value, setData),
+        onClose: () => setLinkView(null),
+      });
+    })()
   );
 }
 
