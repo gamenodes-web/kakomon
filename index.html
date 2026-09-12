@@ -239,35 +239,72 @@ function setSoundOn(on) {
   try { localStorage.setItem(SOUND_KEY, on ? 'on' : 'off'); } catch {}
 }
 
-// 種類ごとの音程と長さ。抽選はころころ、正解は上がる和音、時間切れは下がる音。
-const TONES = {
-  draw:    [[660, 0, .05], [880, .05, .05], [990, .1, .07]],
-  open:    [[520, 0, .07]],
-  correct: [[784, 0, .08], [988, .07, .08], [1319, .14, .18]],
-  timeup:  [[440, 0, .12], [330, .12, .18]],
+// 「かちゃっ」は音程のある音ではなく短い雑音で作る。板をはじいたような
+// 手触りにしたいので、雑音を帯域で絞ってすぐ切る。音量はどれも控えめ。
+let noiseBuf = null;
+
+function noiseBuffer(ctx) {
+  if (noiseBuf && noiseBuf.sampleRate === ctx.sampleRate) return noiseBuf;
+  const len = Math.floor(ctx.sampleRate * 0.06);
+  noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return noiseBuf;
+}
+
+// 雑音をひとつ鳴らす（at 秒後に dur 秒、hz あたりの高さ、vol の大きさ）
+function clickAt(ctx, at, dur, hz, vol) {
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx);
+  const band = ctx.createBiquadFilter();
+  band.type = 'bandpass';
+  band.frequency.value = hz;
+  band.Q.value = 1.2;
+  const gain = ctx.createGain();
+  const now = ctx.currentTime + at;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(vol, now + 0.004);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  src.connect(band).connect(gain).connect(ctx.destination);
+  src.start(now);
+  src.stop(now + dur + 0.02);
+}
+
+// 音程のある音。正解と時間切れにだけ使う
+function toneAt(ctx, at, dur, hz, vol) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const now = ctx.currentTime + at;
+  osc.type = 'triangle';
+  osc.frequency.value = hz;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(vol, now + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + dur + 0.02);
+}
+
+const SOUNDS = {
+  // ボタンやプルダウンをさわったとき。ひとつだけ、ごく短く
+  click:   ctx => clickAt(ctx, 0, .035, 2400, .05),
+  // 抽選はサイコロを振った感じに、かちゃかちゃと重ねる
+  draw:    ctx => [0, .055, .105, .15].forEach((at, i) => clickAt(ctx, at, .04, 1800 + i * 260, .06)),
+  // 問題を開くときは、少し低いかちゃっ
+  open:    ctx => clickAt(ctx, 0, .04, 1500, .055),
+  // 正解だけは音程を付ける。うるさくならないよう小さく短く
+  correct: ctx => { clickAt(ctx, 0, .03, 2600, .04); toneAt(ctx, .02, .1, 880, .07); toneAt(ctx, .09, .14, 1319, .06); },
+  timeup:  ctx => { toneAt(ctx, 0, .12, 420, .07); toneAt(ctx, .11, .18, 300, .06); },
 };
 
 function play(kind) {
-  if (!soundOn() || !TONES[kind]) return;
+  if (!soundOn() || !SOUNDS[kind]) return;
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     if (!audioCtx) audioCtx = new Ctx();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    const now = audioCtx.currentTime;
-    TONES[kind].forEach(([hz, at, dur]) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = hz;
-      // 立ち上がりと減衰を付けないと「ブツッ」と鳴るので、包絡線を掛ける
-      gain.gain.setValueAtTime(0, now + at);
-      gain.gain.linearRampToValueAtTime(.18, now + at + .012);
-      gain.gain.exponentialRampToValueAtTime(.0001, now + at + dur);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(now + at);
-      osc.stop(now + at + dur + .02);
-    });
+    SOUNDS[kind](audioCtx);
   } catch {}
 }
 
@@ -838,7 +875,7 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
       h('span', { className: 'text-xs text-gray-300', style: { fontWeight: 600 } }, `問題 ${no}`),
       onSetCount && h('span', { className: 'text-xs text-gray-400' }, '正解'),
       onSetCount && h('select', {
-        title: '正解回数', value: record.correct,
+        title: 'この問題の正解回数', 'data-sound': 'off', value: record.correct,
         onChange: e => onSetCount('correct', Number(e.target.value)),
         className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
       }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
@@ -1192,6 +1229,7 @@ function CorrectButton({ onAdd }) {
     className: 'ok-btn' + (pop ? ' pop' : ''),
     key: `ok${pop}`,
     title: '正解を1つ足す',
+    'data-sound': 'own',
     onClick: e => { play('correct'); setPop(n => n + 1); burstAt(e.currentTarget); onAdd(); },
   }, '✓');
 }
@@ -1326,11 +1364,11 @@ function QuestionSheet({
         return h('div', { className: 'q-line', key: q.id },
           h('span', { className: 'no' }, no),
           q.url
-            ? h('button', { className: 'open', onClick: () => onOpenLink && onOpenLink(q.id) }, '問題を開く →')
+            ? h('button', { className: 'open', 'data-sound': 'own', onClick: () => onOpenLink && onOpenLink(q.id) }, '問題を開く →')
             : h('span', { className: 'open none' }, pids.length ? '写真を見る' : 'URLなし'),
           h(CorrectButton, { onAdd: () => onCorrect(q.id) }),
           h('select', {
-            className: 'cnt', title: '正解回数', value: r.correct,
+            className: 'cnt', title: 'この問題の正解回数', 'data-sound': 'off', value: r.correct,
             onChange: e => onSetCount(q.id, 'correct', Number(e.target.value)),
           }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
           h('span', { className: 'shot' },
@@ -1385,13 +1423,14 @@ function QuestionSheet({
             : null,
           q.url
             ? (onOpenLink
-                ? h('button', { className: 'q-open', onClick: () => onOpenLink(q.id) }, '問題を開く →')
+                ? h('button', { className: 'q-open', 'data-sound': 'own', onClick: () => onOpenLink(q.id) }, '問題を開く →')
                 : h('a', { className: 'q-open', href: q.url, target: '_blank', rel: 'noopener noreferrer' }, '問題を開く →'))
             : (onSetUrl ? null : h('div', { style: { color: '#999', fontSize: '13px', margin: '6px 0' } }, '（URLなし）')),
 
           h('div', { className: 'q-row' },
             h('label', null, '正解'),
             h('select', {
+              title: 'この問題の正解回数', 'data-sound': 'off',
               value: r.correct, onChange: e => onSetCount(q.id, 'correct', Number(e.target.value)),
             }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
             onCorrect && h(CorrectButton, { onAdd: () => onCorrect(q.id) })
@@ -1471,6 +1510,7 @@ function QuestionSheet({
                 ? (onOpenLink
                     ? h('button', {
                         onClick: () => onOpenLink(q.id),
+                        'data-sound': 'own',
                         className: 'xl-link', style: { flex: '0 0 auto', background: 'none', border: 0, cursor: 'pointer' },
                         title: 'アプリの中で開く',
                       }, '開く →')
@@ -1482,7 +1522,7 @@ function QuestionSheet({
             )),
             h('td', null, h('div', { className: 'xl-cell', style: { padding: '2px 6px', display: 'flex', alignItems: 'center', gap: '6px' } },
               h('select', {
-                className: 'xl-select', value: r.correct,
+                className: 'xl-select', title: 'この問題の正解回数', 'data-sound': 'off', value: r.correct,
                 onChange: e => onSetCount(q.id, 'correct', Number(e.target.value))
               }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
               onCorrect && h(CorrectButton, { onAdd: () => onCorrect(q.id) })
@@ -1600,6 +1640,7 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progres
 
   const drawButton = h('button', {
     className: 'xl-btn',
+    'data-sound': 'own',
     disabled: pool.length === 0,
     onClick: () => {
       play('draw');
@@ -2886,6 +2927,28 @@ function App() {
   // 前回までに参照が切れた画像を、起動時に掃除する
   useEffect(() => {
     if (data && Array.isArray(data.units)) gcPhotos([data.photos]).catch(() => {});
+  }, []);
+
+  // ボタンとプルダウンに、さわった合図の音を付ける。
+  // 一つずつ書くと付け忘れるので、まとめて拾う。自前の音を持つものと、
+  // 数を選ぶだけのところ（data-sound）は鳴らさない。
+  useEffect(() => {
+    function tapped(e) {
+      const el = e.target.closest && e.target.closest('button, [role="button"], label.xl-btn');
+      if (!el || el.disabled || el.dataset.sound) return;
+      play('click');
+    }
+    function changed(e) {
+      const el = e.target;
+      if (!el || el.tagName !== 'SELECT' || el.dataset.sound) return;
+      play('click');
+    }
+    document.addEventListener('click', tapped, true);
+    document.addEventListener('change', changed, true);
+    return () => {
+      document.removeEventListener('click', tapped, true);
+      document.removeEventListener('change', changed, true);
+    };
   }, []);
 
   return h('div', { className: 'min-h-screen' },
