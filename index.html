@@ -15,192 +15,247 @@
 <script src="react-dom.js"></script>
 <script src="jszip.js"></script>
 <style>
-  body { background: #030712; color: white; font-family: system-ui, sans-serif; -webkit-tap-highlight-color: transparent; padding-bottom: env(safe-area-inset-bottom); }
-  button { touch-action: manipulation; }
-  .pb-safe { padding-bottom: max(5rem, calc(5rem + env(safe-area-inset-bottom))); }
+  /* ── 色と形の決めごと ─────────────────────────────────────────────────
+     角丸・影・文字の大きさ・色を数種類に絞って、画面ごとにばらけないようにする。
+     白と黒は同じ変数を差し替えるだけで入れ替わる。 */
+  :root {
+    --bg:#F4F6F9; --surface:#FFFFFF; --sunken:#F5F7FA; --line:#E9EDF3;
+    --ink:#0F172A; --muted:#64748B; --faint:#94A3B8;
+    --accent:#4F46E5; --accent-ink:#FFFFFF; --accent-soft:#EEF0FE;
+    --ok:#16A34A; --ok-soft:#E9F8EF; --ok-line:#BFE7CE;
+    --warn:#B45309; --warn-soft:#FEF6E7; --danger:#DC2626;
+    --shadow:0 1px 2px rgba(16,24,40,.06); --shadow-lg:0 6px 24px rgba(16,24,40,.14);
+    --r:16px; --r-sm:12px; --r-xs:10px;
+  }
+  html[data-theme="dark"] {
+    --bg:#0E121A; --surface:#171D28; --sunken:#212936; --line:#2A3344;
+    --ink:#E8ECF3; --muted:#95A1B4; --faint:#6B7789;
+    --accent:#818CF8; --accent-ink:#101425; --accent-soft:#262E4A;
+    --ok:#34D399; --ok-soft:#16302A; --ok-line:#2A5F4C;
+    --warn:#FBBF24; --warn-soft:#332A14; --danger:#F87171;
+    --shadow:0 1px 2px rgba(0,0,0,.45); --shadow-lg:0 8px 28px rgba(0,0,0,.55);
+  }
 
-  /* ── Excel風のシート表示（PC向け）───────────────────────────────── */
-  .xl-app { background:#f7f7f7; border:1px solid #8a8a8a; border-radius:4px; color:#1f2328; overflow:hidden; }
-  .xl-toolbar { background:#f7f7f7; border-bottom:1px solid #c8c8c8; padding:10px 12px; }
-  .xl-label { font-size:12px; color:#555; margin-bottom:3px; display:block; }
-  .xl-input, .xl-toolbar select, .xl-toolbar input {
-    border:1px solid #b0b0b0; background:#fff; color:#1f2328; font-size:13px;
-    padding:5px 8px; border-radius:2px; font-family:inherit;
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    padding-bottom: env(safe-area-inset-bottom);
   }
-  .xl-input:focus, .xl-toolbar select:focus, .xl-toolbar input:focus { outline:2px solid #217346; outline-offset:-2px; }
+  button { touch-action: manipulation; font-family: inherit; }
+  .pb-safe { padding-bottom: max(5rem, calc(5rem + env(safe-area-inset-bottom))); }
+  .pomo-btn { bottom: 16px; }
+
+  /* ── 上のバー ───────────────────────────────────────────────────────── */
+  .appbar {
+    position:sticky; top:0; z-index:40; background:var(--bg); border-bottom:1px solid var(--line);
+  }
+  .appbar .inner { display:flex; align-items:center; gap:8px; padding:10px 16px; }
+  .appbar .title { font-size:19px; font-weight:800; letter-spacing:.01em; }
+  .appbar .dots { display:flex; gap:5px; }
+  .appbar .dots i { width:6px; height:6px; border-radius:50%; background:var(--line); display:block; }
+  .appbar .dots i.cur { background:var(--accent); }
+  .icon-btn {
+    width:36px; height:36px; border-radius:var(--r-sm); background:var(--surface);
+    border:1px solid var(--line); color:var(--muted); font-size:14px; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; padding:0;
+  }
+  .icon-btn:disabled { color:var(--faint); opacity:.5; cursor:not-allowed; }
+  .icon-btn.on { color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+  .tab-btn {
+    background:none; border:0; color:var(--muted); font-size:13px; font-weight:700;
+    padding:8px 14px; border-radius:999px; cursor:pointer;
+  }
+  .tab-btn.on { background:var(--accent-soft); color:var(--accent); }
+
+  /* ── 下のタブ（スマホ）─────────────────────────────────────────────── */
+  .tabbar {
+    position:fixed; left:12px; right:12px; z-index:45;
+    bottom:calc(12px + env(safe-area-inset-bottom));
+    background:var(--surface); border:1px solid var(--line); border-radius:20px;
+    box-shadow:var(--shadow-lg); display:flex; padding:7px 5px;
+  }
+  .tabbar button {
+    flex:1; background:none; border:0; padding:4px 0; cursor:pointer;
+    font-size:11px; font-weight:700; color:var(--faint);
+  }
+  .tabbar button b { display:block; font-size:18px; font-weight:400; margin-bottom:1px; }
+  .tabbar button.on { color:var(--accent); }
+
+  /* ── 画面の土台 ─────────────────────────────────────────────────────── */
+  .xl-app { background:transparent; color:var(--ink); }
+  .card, .xl-toolbar, .gauge, .xl-scroll, .xl-status, .xl-empty {
+    background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow);
+  }
+  .xl-toolbar { padding:12px; margin-bottom:10px; }
+  .xl-label { font-size:11px; color:var(--muted); margin-bottom:4px; display:block; font-weight:700; }
+  .xl-input, .xl-toolbar select, .xl-toolbar input, .q-line .cnt, .q-row select {
+    border:1px solid var(--line); background:var(--sunken); color:var(--ink); font-size:14px;
+    padding:9px 10px; border-radius:var(--r-xs); font-family:inherit; font-weight:600;
+  }
+  .xl-input:focus, .xl-toolbar select:focus, .xl-toolbar input:focus, .q-line .cnt:focus {
+    outline:2px solid var(--accent); outline-offset:-2px; background:var(--surface);
+  }
   .xl-btn {
-    background:#217346; color:#fff; border:1px solid #1b5e3a; font-size:13px; font-weight:600;
-    padding:6px 14px; border-radius:2px; cursor:pointer;
+    background:var(--accent); color:var(--accent-ink); border:0; font-size:14px; font-weight:700;
+    padding:10px 16px; border-radius:var(--r-sm); cursor:pointer;
   }
-  .xl-btn:hover { background:#1b5e3a; }
-  .xl-btn:disabled { background:#cfcfcf; border-color:#bdbdbd; color:#8a8a8a; cursor:not-allowed; }
-  .xl-btn-sub { background:#fff; color:#1f2328; border:1px solid #b0b0b0; font-weight:400; }
-  .xl-btn-sub:hover { background:#eaeaea; }
-  .xl-scroll { background:#fff; overflow:auto; max-height:62vh; }
-  .xl-table { border-collapse:separate; border-spacing:0; font-size:13px; color:#1f2328; white-space:nowrap; width:100%; }
-  /* URL列に余白を吸わせて、表を画面幅いっぱいに広げる */
+  .xl-btn:disabled { background:var(--line); color:var(--faint); cursor:not-allowed; }
+  .xl-btn-sub { background:var(--sunken); color:var(--ink); border:1px solid var(--line); font-weight:600; }
+  .xl-btn-sub:disabled { color:var(--faint); }
+  .xl-scroll { overflow:auto; max-height:62vh; padding:2px; }
+  .xl-status { margin-top:10px; padding:9px 12px; font-size:12px; color:var(--muted); box-shadow:none; background:transparent; }
+  .xl-msg { background:var(--warn-soft); color:var(--warn); font-size:12px; padding:8px 12px; border-radius:var(--r-sm); }
+  .xl-target { background:var(--warn-soft); color:var(--warn); font-size:12px; padding:8px 12px; border-radius:var(--r-sm); margin-bottom:8px; }
+  .xl-empty { padding:32px; text-align:center; color:var(--muted); font-size:13px; }
+  .xl-drop { background:var(--sunken); border:2px dashed var(--line); border-radius:var(--r-sm); padding:14px; text-align:center; font-size:12px; color:var(--muted); }
+  .xl-drop.hot { border-color:var(--accent); background:var(--accent-soft); }
+
+  /* ── 表（PC）─────────────────────────────────────────────────────────── */
+  .xl-table { border-collapse:separate; border-spacing:0; font-size:14px; color:var(--ink); white-space:nowrap; width:100%; }
   .xl-col-url { width:100%; }
   .xl-col-photo { min-width:170px; }
   .xl-thumb, .xl-cell .xl-btn { flex:0 0 auto; }
-  .xl-table th, .xl-table td { border-right:1px solid #d9d9d9; border-bottom:1px solid #d9d9d9; }
+  .xl-table th, .xl-table td { border-bottom:1px solid var(--line); }
   .xl-table thead th {
-    position:sticky; top:0; z-index:2; background:#f2f2f2; color:#333; font-weight:600;
-    text-align:left; padding:6px 10px; border-bottom:1px solid #a6a6a6;
+    position:sticky; top:0; z-index:2; background:var(--surface); color:var(--muted); font-weight:700;
+    text-align:left; padding:9px 12px; font-size:11px; letter-spacing:.04em;
   }
-  .xl-table tbody tr:hover td { background:#eaf3ff; }
+  .xl-table tbody tr:hover td { background:var(--sunken); }
   .xl-rownum {
-    background:#f2f2f2; color:#666; text-align:center; width:46px; min-width:46px;
-    padding:5px 4px; border-right:1px solid #a6a6a6; position:sticky; left:0; z-index:1;
+    color:var(--faint); text-align:center; width:46px; min-width:46px; font-weight:700;
+    padding:7px 4px; position:sticky; left:0; z-index:1; background:var(--surface);
   }
-  .xl-table tbody tr:hover .xl-rownum { background:#dbe9fb; }
-  .xl-cell { padding:5px 10px; }
+  .xl-table tbody tr:hover .xl-rownum { background:var(--sunken); }
+  .xl-cell { padding:6px 12px; }
   .xl-grip { cursor:grab; user-select:none; }
   .xl-grip:active { cursor:grabbing; }
-  .xl-grip .g { color:#b0b0b0; margin-right:3px; }
+  .xl-grip .g { color:var(--faint); margin-right:3px; }
   .xl-dragging td { opacity:.4; }
-  .xl-drop-before td { box-shadow:inset 0 2px 0 0 #217346; }
-  .xl-drop-after td { box-shadow:inset 0 -2px 0 0 #217346; }
-    .xl-link { color:#1155cc; text-decoration:none; font-family:inherit; font-size:13px; padding:0; }
-
-  /* 正解ボタン。押すと数字が跳ねて、輪が広がる（暫定のエフェクト） */
-  .ok-btn {
-    position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
-    background: #eafaf0; border: 1px solid #9ad9b4; color: #12703c; border-radius: 6px;
-    padding: 10px 12px; font-size: 15px; font-family: inherit; cursor: pointer; line-height: 1;
-    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
-  }
-  .ok-btn .n { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 12px; text-align: center; }
-  .ok-btn { font-weight: 700; }
-  .ok-btn.pop { animation: okpop .45s cubic-bezier(.2,1.6,.4,1); background: #b9f3d0; border-color: #3fbf78; }
-  .ok-btn.pop .n { animation: oknum .45s cubic-bezier(.2,1.8,.3,1); }
-  .ok-btn.pop::after {
-    content: ''; position: absolute; inset: -6px; border-radius: 12px;
-    border: 2px solid #35c47a; animation: okring .55s ease-out forwards; pointer-events: none;
-  }
-  @keyframes okpop { 0% { transform: scale(1); } 35% { transform: scale(1.18); } 100% { transform: scale(1); } }
-  @keyframes oknum { 0% { transform: translateY(0) scale(1); } 30% { transform: translateY(-6px) scale(1.5); } 100% { transform: translateY(0) scale(1); } }
-  @keyframes okring { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.5); } }
-  .spark { position: fixed; pointer-events: none; z-index: 70; font-size: 20px; animation: sparkfly .7s ease-out forwards; }
-  @keyframes sparkfly { 0% { opacity: 1; transform: translate(0,0) scale(.6); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.2); } }
-
-  /* 単元のメーターと、今日の目標の球 */
-  .gauge { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border-bottom: 1px solid #d9d9d9; }
-  .gauge .meter { flex: 1 1 auto; min-width: 0; }
-  .gauge .bar { height: 12px; border-radius: 999px; background: #e8e8e8; overflow: hidden; }
-  .gauge .bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#39b56a,#7fe3a5); transition: width .5s cubic-bezier(.2,.9,.3,1); }
-  .gauge .cap { font-size: 11px; color: #666; display: flex; justify-content: space-between; margin-bottom: 3px; }
-  .ball { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 50%; position: relative; overflow: hidden;
-          border: 2px solid #b9cfe8; background: #f2f7fd; cursor: pointer; }
-  .ball > i { position: absolute; left: -25%; width: 150%; bottom: 0; height: 0;
-              background: linear-gradient(180deg,#5db2f0,#2d7fd0); transition: height .6s cubic-bezier(.2,.9,.3,1); }
-  .ball > i::before, .ball > i::after {
-    content: ''; position: absolute; top: -6px; left: 0; width: 100%; height: 12px; border-radius: 50%;
-    background: inherit;
-  }
-  .ball > i::after { opacity: .6; animation: wave 3s linear infinite; }
-  @keyframes wave { 0% { transform: translateX(-12%); } 50% { transform: translateX(12%); } 100% { transform: translateX(-12%); } }
-  .ball .lab { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-               font-size: 12px; font-weight: 700; color: #123; text-shadow: 0 1px 2px rgba(255,255,255,.8); }
-  .ball.full { border-color: #3fbf78; box-shadow: 0 0 0 3px rgba(63,191,120,.25); }
+  .xl-drop-before td { box-shadow:inset 0 2px 0 0 var(--accent); }
+  .xl-drop-after td { box-shadow:inset 0 -2px 0 0 var(--accent); }
+  .xl-link { color:var(--accent); text-decoration:none; font-family:inherit; font-size:13px; padding:0; font-weight:700; background:none; border:0; cursor:pointer; }
   .xl-link:hover { text-decoration:underline; }
-  .xl-url { flex:1 1 auto; min-width:0; border:1px solid transparent; background:transparent; font-family:inherit; font-size:13px; color:#1f2328; padding:3px 4px; border-radius:2px; }
-  .xl-url:hover { border-color:#c4c4c4; background:#fff; }
-  .xl-url:focus { outline:2px solid #217346; outline-offset:-2px; background:#fff; }
-  .xl-url::placeholder { color:#b0b0b0; }
-  .xl-select { border:1px solid transparent; background:transparent; font-size:13px; color:#1f2328; padding:3px 4px; border-radius:2px; font-family:inherit; }
-  .xl-select:hover { border-color:#c4c4c4; background:#fff; }
-  .xl-select:focus { outline:2px solid #217346; outline-offset:-2px; background:#fff; }
-  .xl-thumb { height:34px; width:auto; border:1px solid #c4c4c4; display:block; cursor:pointer; background:#fff; }
-  .xl-status { background:#f7f7f7; border-top:1px solid #c8c8c8; padding:6px 12px; font-size:12px; color:#555; }
-  .xl-msg { background:#fff7d6; border:1px solid #e0c96b; color:#6b5a12; font-size:12px; padding:6px 12px; }
-  .xl-drop { background:#fff; border:2px dashed #b0b0b0; border-radius:3px; padding:14px; text-align:center; font-size:12px; color:#555; }
-  .xl-drop.hot { border-color:#217346; background:#eef8f1; }
-  .xl-empty { padding:28px; text-align:center; color:#777; font-size:13px; background:#fff; }
-  .xl-target { background:#fff3cd; border:1px solid #e0c96b; font-size:12px; color:#6b5a12; padding:6px 12px; }
+  .xl-url { flex:1 1 auto; min-width:0; border:1px solid transparent; background:transparent; font-family:inherit; font-size:13px; color:var(--ink); padding:5px 6px; border-radius:8px; }
+  .xl-url:hover { border-color:var(--line); background:var(--sunken); }
+  .xl-url:focus { outline:2px solid var(--accent); outline-offset:-2px; background:var(--surface); }
+  .xl-url::placeholder { color:var(--faint); }
+  .xl-select { border:1px solid transparent; background:transparent; font-size:13px; color:var(--ink); padding:5px 6px; border-radius:8px; font-family:inherit; font-weight:600; }
+  .xl-select:hover { border-color:var(--line); background:var(--sunken); }
+  .xl-select:focus { outline:2px solid var(--accent); outline-offset:-2px; background:var(--surface); }
+  .xl-thumb { height:34px; width:auto; border-radius:8px; display:block; cursor:pointer; background:var(--sunken); }
 
-  /* ── カレンダー（日付のマスに直接書き込む）───────────────────────────── */
-  .cal-table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; background:#fff; }
-  .cal-table th {
-    background:#f2f2f2; color:#333; font-weight:600; font-size:12px; padding:5px 8px;
-    border-right:1px solid #d9d9d9; border-bottom:1px solid #a6a6a6; text-align:left;
+  /* ── 正解ボタン（押すと弾ける）───────────────────────────────────────── */
+  .ok-btn {
+    position:relative; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+    background:var(--ok-soft); border:1px solid var(--ok-line); color:var(--ok); border-radius:var(--r-sm);
+    width:42px; height:42px; font-size:19px; font-weight:800; cursor:pointer; line-height:1; padding:0;
   }
-  .cal-table td { border-right:1px solid #d9d9d9; border-bottom:1px solid #d9d9d9; padding:0; vertical-align:top; height:112px; }
-  .cal-out { background:#fafafa; }
-  .cal-day { font-size:12px; padding:3px 7px 1px; color:#555; display:flex; align-items:center; gap:5px; }
-  .cal-today .cal-day { background:#217346; color:#fff; font-weight:700; }
-  .cal-sun .cal-day { color:#c00000; }
-  .cal-sat .cal-day { color:#0070c0; }
-  .cal-today.cal-sun .cal-day, .cal-today.cal-sat .cal-day { color:#fff; }
+  .ok-btn.pop { animation:okpop .45s cubic-bezier(.2,1.6,.4,1); background:var(--ok); color:#fff; border-color:var(--ok); }
+  .ok-btn.pop::after {
+    content:''; position:absolute; inset:-6px; border-radius:16px;
+    border:2px solid var(--ok); animation:okring .55s ease-out forwards; pointer-events:none;
+  }
+  @keyframes okpop { 0%{transform:scale(1)} 35%{transform:scale(1.18)} 100%{transform:scale(1)} }
+  @keyframes okring { 0%{opacity:.9;transform:scale(.7)} 100%{opacity:0;transform:scale(1.5)} }
+  .spark { position:fixed; pointer-events:none; z-index:70; font-size:20px; animation:sparkfly .7s ease-out forwards; }
+  @keyframes sparkfly { 0%{opacity:1;transform:translate(0,0) scale(.6)} 100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.2)} }
+
+  /* ── 進み具合（メーターと今日の球）─────────────────────────────────── */
+  .gauge { display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:10px; }
+  .gauge .meter { flex:1 1 auto; min-width:0; }
+  .gauge .bar { height:7px; border-radius:999px; background:var(--line); overflow:hidden; }
+  .gauge .bar > i { display:block; height:100%; border-radius:999px; background:var(--ok); transition:width .5s cubic-bezier(.2,.9,.3,1); }
+  .gauge .cap { font-size:11px; color:var(--muted); display:flex; justify-content:space-between; margin-bottom:5px; font-weight:700; }
+  .gauge .cap b { color:var(--ink); font-weight:800; }
+  .ball {
+    flex:0 0 auto; width:54px; height:54px; border-radius:50%; position:relative; overflow:hidden;
+    border:2px solid var(--line); background:var(--sunken); cursor:pointer; padding:0;
+  }
+  .ball > i {
+    position:absolute; left:-25%; width:150%; bottom:0; height:0;
+    background:var(--accent); transition:height .6s cubic-bezier(.2,.9,.3,1);
+  }
+  .ball > i::before, .ball > i::after {
+    content:''; position:absolute; top:-6px; left:0; width:100%; height:12px; border-radius:50%; background:inherit;
+  }
+  .ball > i::after { opacity:.6; animation:wave 3s linear infinite; }
+  @keyframes wave { 0%{transform:translateX(-12%)} 50%{transform:translateX(12%)} 100%{transform:translateX(-12%)} }
+  .ball .lab { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--ink); }
+  .ball.full { border-color:var(--ok); box-shadow:0 0 0 3px var(--ok-soft); }
+
+  /* ── カレンダー ─────────────────────────────────────────────────────── */
+  .cal-table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; background:var(--surface); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
+  .cal-table th { background:var(--surface); color:var(--muted); font-weight:700; font-size:11px; padding:8px; border-bottom:1px solid var(--line); text-align:left; }
+  .cal-table td { border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:0; vertical-align:top; height:112px; }
+  .cal-out { background:var(--sunken); }
+  .cal-day { font-size:12px; padding:4px 8px 1px; color:var(--muted); display:flex; align-items:center; gap:5px; font-weight:700; }
+  .cal-today .cal-day { background:var(--accent); color:var(--accent-ink); }
+  .cal-sun .cal-day { color:var(--danger); }
+  .cal-sat .cal-day { color:var(--accent); }
+  .cal-today.cal-sun .cal-day, .cal-today.cal-sat .cal-day { color:var(--accent-ink); }
   .cal-memo {
     display:block; width:100%; height:88px; border:0; outline:0; resize:none; background:transparent;
-    font-family:inherit; font-size:12px; line-height:1.5; color:#1f2328; padding:3px 7px 6px;
+    font-family:inherit; font-size:12px; line-height:1.5; color:var(--ink); padding:3px 8px 6px;
   }
-  .cal-memo:focus { background:#fffbe6; }
-  .cal-memo::placeholder { color:#c8c8c8; }
+  .cal-memo:focus { background:var(--accent-soft); }
+  .cal-memo::placeholder { color:var(--faint); }
 
   /* ── スマホ（幅720pxまで）───────────────────────────────────────────── */
   @media (max-width: 720px) {
-    .pc-only { display: none !important; }
-    .xl-app { border-radius: 0; border-left: 0; border-right: 0; }
-    .xl-pad { padding: 8px !important; }
-    .xl-toolbar { padding: 8px; gap: 8px !important; }
-    .xl-toolbar > div { flex: 1 1 44% !important; min-width: 0 !important; }
-    .xl-toolbar .xl-field-wide { flex: 1 1 100% !important; }
-    /* 16px未満だと iPhone で入力時に勝手に拡大される */
-    .xl-toolbar select, .xl-toolbar input, .xl-input {
-      width: 100% !important; min-width: 0 !important; font-size: 16px !important;
-    }
-    .xl-btn { padding: 10px 14px; font-size: 14px; }
-    .xl-toolbar .xl-btn { flex: 0 0 auto; }
-    .xl-msg, .xl-status, .xl-target { font-size: 12px; padding: 8px; }
-    .sticky button { white-space: nowrap; padding: 8px 10px; }
+    .pc-only { display:none !important; }
+    .xl-pad { padding:8px !important; }
+    /* 下のタブに隠れないよう、いちばん下に余白を残す */
+    .pb-safe { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+    .pomo-btn { bottom: calc(84px + env(safe-area-inset-bottom)); }
+    .gauge { padding:10px; }
+    .ball { width:48px; height:48px; }
+    .xl-toolbar { padding:10px; }
+    .xl-toolbar select, .xl-toolbar input, .xl-input { font-size:16px !important; }
+    .xl-btn { padding:11px 15px; font-size:15px; }
+    .xl-scroll { max-height:none; background:transparent; box-shadow:none; padding:0; }
+    .xl-status { font-size:12px; padding:8px 4px; }
 
-    /* 問題はカードで縦に積む */
-    .q-card { border-bottom: 8px solid #eee; background: #fff; padding: 10px 12px; }
-    .q-card:last-child { border-bottom: 0; }
-    .q-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .q-no { font-weight: 700; font-size: 15px; color: #1f2328; }
-    .q-open {
-      display: block; width: 100%; text-align: center; background: #eef4ff; border: 1px solid #b6cdf5;
-      color: #1155cc; border-radius: 4px; padding: 12px; font-size: 15px; margin: 8px 0; text-decoration: none;
-      font-family: inherit; cursor: pointer;
-    }
-    .q-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
-
-    /* 出題中の1問1行（No・問題を開く・正解・写真をすべて横並び） */
+    /* 出題中は1問1行。単元名と何問目、正解ボタン、回数、写真を横並びにする */
     .q-line {
-      display: flex; align-items: center; gap: 6px; padding: 6px 8px;
-      border-bottom: 1px solid #e6e6e6; background: #fff; min-height: 56px; box-sizing: border-box;
-    }
-    .q-line .no {
-      flex: 0 0 auto; min-width: 34px; text-align: right; font-size: 13px; color: #666;
-      font-variant-numeric: tabular-nums;
+      display:flex; align-items:center; gap:9px; padding:5px 11px; margin-bottom:6px;
+      background:var(--surface); border-radius:14px; box-shadow:var(--shadow);
+      min-height:52px; box-sizing:border-box;
     }
     .q-line .open {
-      flex: 1 1 auto; min-width: 0; text-align: center; background: #eef4ff; border: 1px solid #b6cdf5;
-      color: #1155cc; border-radius: 6px; padding: 11px 6px; font-size: 14px; font-family: inherit;
-      cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;
+      flex:1 1 auto; min-width:0; background:none; border:0; padding:0; text-align:left;
+      font-family:inherit; cursor:pointer; color:var(--ink);
     }
-    .q-line .open.none { background: #f4f4f4; border-color: #ddd; color: #999; cursor: default; }
-    .q-line .shot { flex: 0 0 auto; }
-    .q-line .cnt {
-      flex: 0 0 auto; width: 58px; font-size: 16px; padding: 8px 2px; text-align: center;
-      border: 1px solid #b0b0b0; border-radius: 6px; background: #fff; font-family: inherit;
+    .q-line .open .u { display:block; font-size:11px; color:var(--muted); font-weight:700;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .q-line .open .n { display:block; font-size:16px; font-weight:800; margin-top:1px; }
+    .q-line .open.none .n { color:var(--faint); }
+    .q-line .cnt { flex:0 0 auto; width:56px; text-align:center; font-size:16px; padding:8px 2px; }
+    .q-line .shot { flex:0 0 auto; }
+    .q-line .shot .xl-thumb { height:38px; }
+
+    /* 単元管理は1問1枚のカード */
+    .q-card { background:var(--surface); border-radius:14px; box-shadow:var(--shadow); padding:11px 12px; margin-bottom:8px; }
+    .q-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .q-no { font-weight:800; font-size:15px; color:var(--ink); }
+    .q-open {
+      display:block; width:100%; text-align:center; background:var(--accent-soft); border:0;
+      color:var(--accent); border-radius:var(--r-sm); padding:12px; font-size:15px; font-weight:700;
+      margin:8px 0; text-decoration:none; font-family:inherit; cursor:pointer;
     }
-    .q-line .shot .xl-thumb { height: 40px; }
-    .q-row label { font-size: 13px; color: #555; }
-    .q-row select { font-size: 16px; padding: 8px; border: 1px solid #b0b0b0; border-radius: 3px; background: #fff; }
-    .q-photos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .q-photos .xl-thumb { height: 56px; }
-    .xl-scroll { max-height: none; }
+    .q-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:6px; }
+    .q-row label { font-size:13px; color:var(--muted); font-weight:700; }
+    .q-row select { font-size:16px; }
+    .q-photos { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .q-photos .xl-thumb { height:56px; }
 
     /* カレンダーは日付を小さく、書き込みは下の欄で */
-    .cal-table td { height: 44px; }
-    .q-line { min-height: 52px; }
-    .cal-table th { padding: 4px; text-align: center; }
-    .cal-day { justify-content: center; padding: 2px; }
-    .cal-memo { display: none; }
-    .cal-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #217346; }
+    .cal-table td { height:44px; }
+    .cal-table th { padding:4px; text-align:center; }
+    .cal-day { justify-content:center; padding:2px; }
+    .cal-memo { display:none; }
+    .cal-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--ok); }
   }
 </style>
 </head>
@@ -308,17 +363,48 @@ function play(kind) {
   } catch {}
 }
 
+// ── 見た目（白／黒）───────────────────────────────────────────────────────
+const THEME_KEY = 'feExamTheme';
+
+function loadTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    if (v === 'light' || v === 'dark') return v;
+  } catch {}
+  // はじめは端末の設定に合わせる
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  } catch {}
+  return 'light';
+}
+
+function applyTheme(v) {
+  document.documentElement.setAttribute('data-theme', v);
+  try { localStorage.setItem(THEME_KEY, v); } catch {}
+}
+
 // ── 1問あたりの制限時間 ──────────────────────────────────────────────────────
-const TIMER_KEY = 'feExamTimer';
-const LIMIT_SEC = 60;
+const TIMER_KEY = 'feExamLimit';
+const LIMIT_CHOICES = [0, 30, 60, 90, 120, 180, 300];   // 0 は「なし」
+const DEFAULT_LIMIT = 60;
 
-function limitOn() {
-  try { return localStorage.getItem(TIMER_KEY) !== 'off'; } catch { return true; }
+function loadLimit() {
+  try {
+    const raw = localStorage.getItem(TIMER_KEY);
+    if (raw === null) {
+      // 前の版は on/off だけだったので、その設定を引き継ぐ
+      return localStorage.getItem('feExamTimer') === 'off' ? 0 : DEFAULT_LIMIT;
+    }
+    const v = Number(raw);
+    return LIMIT_CHOICES.includes(v) ? v : DEFAULT_LIMIT;
+  } catch { return DEFAULT_LIMIT; }
 }
 
-function setLimitOn(on) {
-  try { localStorage.setItem(TIMER_KEY, on ? 'on' : 'off'); } catch {}
+function saveLimit(v) {
+  try { localStorage.setItem(TIMER_KEY, String(v)); } catch {}
 }
+
+const limitLabel = v => (v ? (v >= 60 && v % 60 === 0 ? `${v / 60}分` : `${v}秒`) : 'なし');
 
 // 今日の進み具合と目標。端末ごとの記録なので、取り消し履歴には乗せない
 // （問題を開くたびに履歴が埋まると、単元整理のやり直しができなくなるため）。
@@ -805,8 +891,9 @@ function loadZoom() {
 function LinkViewer({ url, no, record, onSetCount, onClose }) {
   const [loaded, setLoaded] = useState(false);
   const [slow, setSlow] = useState(false);
-  const [limit, setLimit] = useState(() => limitOn());
-  const [left, setLeft] = useState(LIMIT_SEC);
+  const [limit, setLimit] = useState(() => loadLimit());   // 0 は「なし」
+  const [left, setLeft] = useState(() => loadLimit());
+  const [pickLimit, setPickLimit] = useState(false);
   const [zoom, setZoom] = useState(() => { try { return loadZoom(); } catch { return 1; } });
   // 枠の実寸。縮小したぶん中のページを広く描き、全体を縮めて収める。
   const boxRef = useRef(null);
@@ -850,11 +937,11 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
 
   // 制限時間。0になったら音を鳴らして、選ぶ画面へ自分で戻る。
   useEffect(() => {
-    setLeft(LIMIT_SEC);
-    if (!limit) return;
+    setLeft(limit);
+    if (!limit) return undefined;
     const started = Date.now();
     const id = setInterval(() => {
-      const rest = LIMIT_SEC - Math.floor((Date.now() - started) / 1000);
+      const rest = limit - Math.floor((Date.now() - started) / 1000);
       if (rest > 0) { setLeft(rest); return; }
       clearInterval(id);
       setLeft(0);
@@ -880,13 +967,20 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
         className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
       }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
       h('button', {
-        onClick: () => { const v = !limit; setLimit(v); setLimitOn(v); },
-        title: limit ? '制限時間を止める' : '1分の制限時間を使う',
+        onClick: () => setPickLimit(v => !v),
+        title: '制限時間を変える',
         className: `text-xs px-2 py-1.5 rounded-lg border tabular-nums ${limit
           ? (left <= 10 ? 'bg-red-900 border-red-500 text-red-100' : 'bg-gray-800 border-gray-600 text-gray-100')
           : 'bg-gray-800 border-gray-700 text-gray-500'}`,
-        style: { minWidth: '58px' },
+        style: { minWidth: '62px' },
       }, limit ? `⏱ ${left}秒` : '⏱ なし'),
+      pickLimit && h('span', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap' } },
+        LIMIT_CHOICES.map(v => h('button', {
+          key: v,
+          onClick: () => { setLimit(v); saveLimit(v); setPickLimit(false); },
+          className: `text-xs px-2 py-1.5 rounded-lg border ${v === limit
+            ? 'bg-blue-700 border-blue-500 text-white' : 'bg-gray-800 border-gray-600 text-gray-200'}`,
+        }, limitLabel(v)))),
       h('span', { style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' } },
         h('button', {
           onClick: () => changeZoom(zoom - 0.1), disabled: zoom <= ZOOM_MIN, title: '表示を小さくする',
@@ -1293,7 +1387,8 @@ function GaugeBar({ unit, records, progress, onSetGoal }) {
       title: `今日 ${today} / ${progress.goal} 問（押すと目標を変えられます）`,
       onClick: () => setEditing(v => !v),
     },
-      h('i', { style: { height: `${Math.round(filled * 100)}%` } }),
+      // 0のときは波を描かない（下辺に青い線が残って見えるため）
+      filled > 0 && h('i', { style: { height: `${Math.round(filled * 100)}%` } }),
       h('span', { className: 'lab' }, filled >= 1 ? '達成!' : `${today}/${progress.goal}`)
     )
   );
@@ -1333,7 +1428,7 @@ function PhotoCell({ pids, isTarget, onOpen, onPick }) {
 function QuestionSheet({
   questions, nos, data, onSetUrl, onSetCount, onOpenPhoto, onPickPhoto,
   pasteTarget, onDeleteRow, onDuplicate, onReorder, scrollSignal, emptyText, onOpenLink,
-  compact, onCorrect,
+  compact, onCorrect, unitName,
 }) {
   const isPhone = useIsPhone();
   const scroller = useRef(null);
@@ -1362,10 +1457,16 @@ function QuestionSheet({
         const no = nos ? nos[i] : i + 1;
         const pids = photoIdsOf(data.photos, q.id);
         return h('div', { className: 'q-line', key: q.id },
-          h('span', { className: 'no' }, no),
           q.url
-            ? h('button', { className: 'open', 'data-sound': 'own', onClick: () => onOpenLink && onOpenLink(q.id) }, '問題を開く →')
-            : h('span', { className: 'open none' }, pids.length ? '写真を見る' : 'URLなし'),
+            ? h('button', {
+                className: 'open', 'data-sound': 'own', title: '問題を開く',
+                onClick: () => onOpenLink && onOpenLink(q.id),
+              },
+                h('span', { className: 'u' }, unitName || '　'),
+                h('span', { className: 'n' }, `${no}問目`))
+            : h('span', { className: 'open none' },
+                h('span', { className: 'u' }, unitName || '　'),
+                h('span', { className: 'n' }, `${no}問目${pids.length ? '（写真）' : '（URLなし）'}`)),
           h(CorrectButton, { onAdd: () => onCorrect(q.id) }),
           h('select', {
             className: 'cnt', title: 'この問題の正解回数', 'data-sound': 'off', value: r.correct,
@@ -1743,7 +1844,7 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progres
           onSetCount: (qid, field, value) => setCountFor(qid, field, value, setData),
           onOpenPhoto: onShowPhoto,
           onPickPhoto: qid => setPasteTarget(pasteTarget === qid ? null : qid),
-          pasteTarget, onOpenLink, compact: true,
+          pasteTarget, onOpenLink, compact: true, unitName: unit ? unit.name : '',
           // 正解を押したら回数を1つ増やし、その日「手をつけた問題」にも数える
           onCorrect: qid => {
             const now = (data.records[qid] || {}).correct || 0;
@@ -2706,12 +2807,12 @@ function PomodoroTimer() {
   if (!open) {
     return h('button', {
       onClick: () => setOpen(true),
-      className: 'fixed bottom-4 right-4 bg-gray-900 border border-gray-700 rounded-full w-12 h-12 flex items-center justify-center text-xl shadow-lg hover:border-blue-500 transition-colors z-50'
+      className: 'pomo-btn fixed right-4 bg-gray-900 border border-gray-700 rounded-full w-12 h-12 flex items-center justify-center text-xl shadow-lg hover:border-blue-500 transition-colors z-50'
     }, '🍅');
   }
 
   return h('div', {
-    className: 'fixed bottom-4 right-4 bg-gray-900 border border-gray-700 rounded-2xl p-4 shadow-xl z-50 w-44'
+    className: 'pomo-btn fixed right-4 bg-gray-900 border border-gray-700 rounded-2xl p-4 shadow-xl z-50 w-44'
   },
     // ヘッダー
     h('div', { className: 'flex items-center justify-between mb-3' },
@@ -2764,6 +2865,7 @@ const SCREENS = [
   { id: 'units', label: '単元管理' },
   { id: 'calendar', label: 'カレンダー' },
 ];
+const SCREEN_ICONS = { draw: '🎲', units: '📚', calendar: '📅' };
 const NAV_TABS = [
   { id: 'practice', label: '🎲 過去問演習' },
   { id: 'calendar', label: '📅 カレンダー' },
@@ -2776,6 +2878,8 @@ function App() {
   // 画面は 出題 → 単元管理 → カレンダー の並び。なぞって前後に移る。
   const [tab, setTab] = useState('draw');
   const [sound, setSound] = useState(() => soundOn());
+  const [theme, setTheme] = useState(() => loadTheme());
+  useEffect(() => { applyTheme(theme); }, [theme]);
   const mode = tab === 'calendar' ? 'calendar' : 'practice';
   const setMode = id => setTab(id === 'calendar' ? 'calendar' : 'draw');
   const index = Math.max(0, SCREENS.findIndex(sc => sc.id === tab));
@@ -2952,42 +3056,39 @@ function App() {
   }, []);
 
   return h('div', { className: 'min-h-screen' },
-    h('div', { className: 'sticky top-0 z-40 bg-gray-950/90 backdrop-blur border-b border-gray-800' },
-      h('div', { className: 'px-6 xl-pad flex items-center gap-1 py-2' },
-        // スマホは指でなぞって移るので、切り替えボタンは置かず、いまの場所だけ示す
+    h('div', { className: 'appbar' },
+      h('div', { className: 'inner xl-pad' },
+        // スマホは画面名と点だけ。PCは今までどおり切り替えボタン。
         isPhone
-          ? h('div', { className: 'screen-now flex items-center gap-2' },
-              h('span', { className: 'on text-xs font-semibold text-white' },
-                (SCREENS.find(sc => sc.id === tab) || SCREENS[0]).label),
-              h('span', { className: 'flex items-center gap-1' },
-                SCREENS.map(sc => h('span', {
-                  key: sc.id,
-                  style: {
-                    width: '6px', height: '6px', borderRadius: '50%', display: 'inline-block',
-                    background: sc.id === tab ? '#93c5fd' : '#374151',
-                  },
-                })))
+          ? h('div', { className: 'screen-now', style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+              h('span', { className: 'on title' }, (SCREENS.find(sc => sc.id === tab) || SCREENS[0]).label),
+              h('span', { className: 'dots' },
+                SCREENS.map(sc => h('i', { key: sc.id, className: sc.id === tab ? 'cur' : '' })))
             )
           : NAV_TABS.map(t => h('button', {
               key: t.id,
               onClick: () => setMode(t.id),
-              className: `text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${mode === t.id ? 'bg-blue-700 text-white' : 'text-gray-400 hover:text-white'}`
+              className: `tab-btn${mode === t.id ? ' on' : ''}`,
             }, t.label)),
-        h('div', { className: 'flex items-center gap-1 ml-auto' },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' } },
+          h('button', {
+            onClick: () => setTheme(v => (v === 'dark' ? 'light' : 'dark')),
+            title: theme === 'dark' ? '白い画面にする' : '黒い画面にする',
+            className: 'icon-btn',
+          }, theme === 'dark' ? '☀️' : '🌙'),
           h('button', {
             onClick: () => { const v = !sound; setSound(v); setSoundOn(v); if (v) play('open'); },
             title: sound ? '音を消す' : '音を鳴らす',
-            className: `text-xs px-3 py-1.5 rounded-lg border transition-colors ${sound
-              ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-800 text-gray-600'}`,
+            className: `icon-btn${sound ? ' on' : ''}`,
           }, sound ? '🔊' : '🔇'),
           h('button', {
             onClick: undo, disabled: history.undo === 0, title: '元に戻す（Ctrl+Z）',
-            className: `text-xs px-3 py-1.5 rounded-lg border transition-colors ${history.undo ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-800 text-gray-600 cursor-not-allowed'}`
-          }, isPhone ? `↶${history.undo ? history.undo : ''}` : `↶ 元に戻す${history.undo ? `（${history.undo}）` : ''}`),
+            className: 'icon-btn', style: isPhone ? {} : { width: 'auto', padding: '0 12px', fontSize: '12px' },
+          }, isPhone ? '↶' : `↶ 元に戻す${history.undo ? `（${history.undo}）` : ''}`),
           h('button', {
             onClick: redo, disabled: history.redo === 0, title: 'やり直す（Ctrl+Y）',
-            className: `text-xs px-3 py-1.5 rounded-lg border transition-colors ${history.redo ? 'border-gray-600 text-gray-200 hover:bg-gray-800' : 'border-gray-800 text-gray-600 cursor-not-allowed'}`
-          }, isPhone ? `↷${history.redo ? history.redo : ''}` : `↷ やり直す${history.redo ? `（${history.redo}）` : ''}`)
+            className: 'icon-btn', style: isPhone ? {} : { width: 'auto', padding: '0 12px', fontSize: '12px' },
+          }, isPhone ? '↷' : `↷ やり直す${history.redo ? `（${history.redo}）` : ''}`)
         )
       )
     ),
@@ -3059,6 +3160,13 @@ function App() {
         },
       });
     })(),
+    isPhone && h('div', { className: 'tabbar' },
+      SCREENS.map(sc => h('button', {
+        key: sc.id,
+        className: sc.id === tab ? 'on' : '',
+        onClick: () => setTab(sc.id),
+      }, h('b', null, SCREEN_ICONS[sc.id]), sc.label))),
+
     h(PomodoroTimer)
   );
 }
