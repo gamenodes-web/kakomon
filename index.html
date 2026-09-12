@@ -70,6 +70,7 @@
     -webkit-tap-highlight-color: transparent; touch-action: manipulation;
   }
   .ok-btn .n { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 12px; text-align: center; }
+  .ok-btn { font-weight: 700; }
   .ok-btn.pop { animation: okpop .45s cubic-bezier(.2,1.6,.4,1); background: #b9f3d0; border-color: #3fbf78; }
   .ok-btn.pop .n { animation: oknum .45s cubic-bezier(.2,1.8,.3,1); }
   .ok-btn.pop::after {
@@ -182,6 +183,10 @@
     }
     .q-line .open.none { background: #f4f4f4; border-color: #ddd; color: #999; cursor: default; }
     .q-line .shot { flex: 0 0 auto; }
+    .q-line .cnt {
+      flex: 0 0 auto; width: 58px; font-size: 16px; padding: 8px 2px; text-align: center;
+      border: 1px solid #b0b0b0; border-radius: 6px; background: #fff; font-family: inherit;
+    }
     .q-line .shot .xl-thumb { height: 40px; }
     .q-row label { font-size: 13px; color: #555; }
     .q-row select { font-size: 16px; padding: 8px; border: 1px solid #b0b0b0; border-radius: 3px; background: #fff; }
@@ -1095,15 +1100,23 @@ function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, curre
 
 // ── 正解ボタン（押すと1回ぶん増えて、その場で弾ける）──────────────────────────
 // 押し間違いは長押しで1つ戻せる（プルダウンを置くと横幅が足りないため）
-function CorrectButton({ count, onAdd, onUndo }) {
+function CorrectButton({ onAdd }) {
   const [pop, setPop] = useState(0);
-  const held = useRef(false);
-  const timer = useRef(null);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  function burstAt(el) { burstFrom(el); }
 
-  function burst(el) {
-    if (!el || typeof document === 'undefined') return;
+  return h('button', {
+    className: 'ok-btn' + (pop ? ' pop' : ''),
+    key: `ok${pop}`,
+    title: '正解を1つ足す',
+    onClick: e => { setPop(n => n + 1); burstAt(e.currentTarget); onAdd(); },
+  }, '✓');
+}
+
+// 押した場所からキラキラを飛ばす（見た目だけの演出）
+function burstFrom(el) {
+  if (!el || typeof document === 'undefined') return;
+  {
     const b = el.getBoundingClientRect();
     ['✨', '⭐', '✨'].forEach((mark, i) => {
       const sp = document.createElement('span');
@@ -1117,29 +1130,6 @@ function CorrectButton({ count, onAdd, onUndo }) {
       setTimeout(() => sp.remove(), 800);
     });
   }
-
-  function press(e) {
-    held.current = false;
-    timer.current = setTimeout(() => { held.current = true; if (onUndo) onUndo(); }, 650);
-  }
-
-  function release(e) {
-    clearTimeout(timer.current);
-    if (held.current) return;      // 長押しで1つ戻したときは足さない
-    setPop(n => n + 1);
-    burst(e.currentTarget);
-    onAdd();
-  }
-
-  return h('button', {
-    className: 'ok-btn' + (pop ? ' pop' : ''),
-    key: `ok${pop}`,
-    title: '正解（長押しで1つ戻す）',
-    onPointerDown: press,
-    onPointerUp: release,
-    onPointerLeave: () => clearTimeout(timer.current),
-    onPointerCancel: () => clearTimeout(timer.current),
-  }, h('span', null, '✓'), h('span', { className: 'n' }, count));
 }
 
 // ── 単元のメーターと、今日の目標の球 ─────────────────────────────────────────
@@ -1255,11 +1245,11 @@ function QuestionSheet({
           q.url
             ? h('button', { className: 'open', onClick: () => onOpenLink && onOpenLink(q.id) }, '問題を開く →')
             : h('span', { className: 'open none' }, pids.length ? '写真を見る' : 'URLなし'),
-          h(CorrectButton, {
-            count: r.correct,
-            onAdd: () => onCorrect(q.id),
-            onUndo: () => onSetCount(q.id, 'correct', Math.max(0, r.correct - 1)),
-          }),
+          h(CorrectButton, { onAdd: () => onCorrect(q.id) }),
+          h('select', {
+            className: 'cnt', title: '正解回数', value: r.correct,
+            onChange: e => onSetCount(q.id, 'correct', Number(e.target.value)),
+          }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
           h('span', { className: 'shot' },
             pids.length
               ? h(PhotoThumb, { pid: pids[0], onOpen: () => onOpenPhoto(q.id, 0) })
@@ -1321,11 +1311,7 @@ function QuestionSheet({
             h('select', {
               value: r.correct, onChange: e => onSetCount(q.id, 'correct', Number(e.target.value)),
             }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
-            onCorrect && h(CorrectButton, {
-              count: r.correct,
-              onAdd: () => onCorrect(q.id),
-              onUndo: () => onSetCount(q.id, 'correct', Math.max(0, r.correct - 1)),
-            })
+            onCorrect && h(CorrectButton, { onAdd: () => onCorrect(q.id) })
           ),
 
           h('div', { className: 'q-photos' },
@@ -1416,11 +1402,7 @@ function QuestionSheet({
                 className: 'xl-select', value: r.correct,
                 onChange: e => onSetCount(q.id, 'correct', Number(e.target.value))
               }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
-              onCorrect && h(CorrectButton, {
-                count: r.correct,
-                onAdd: () => onCorrect(q.id),
-                onUndo: () => onSetCount(q.id, 'correct', Math.max(0, r.correct - 1)),
-              })
+              onCorrect && h(CorrectButton, { onAdd: () => onCorrect(q.id) })
             )),
             h('td', null, h(PhotoCell, {
               pids: photoIdsOf(data.photos, q.id),
@@ -2348,13 +2330,11 @@ function TransferPanel({ data, setData, setMsg, sel }) {
 }
 
 // ── 過去問演習（出題／単元管理）────────────────────────────────────────────────
-function PracticeHub({ data, setData, onShowPhoto }) {
-  const [tab, setTab] = useState('draw');
+function PracticeHub({ data, setData, onShowPhoto, tab, setTab }) {
   const [msg, setMsg] = useState('');
   const [linkView, setLinkView] = useState(null); // アプリの中で開いている問題
   const [progress, setProgress] = useState(() => loadProgress());
   const isPhone = useIsPhone();
-  const swipe = useRef(null);
 
   // 「手をつけた問題」を今日の分に数える（同じ問題は1回だけ）
   const markQuestionDone = qid => setProgress(p => markDone(p, qid));
@@ -2385,45 +2365,24 @@ function PracticeHub({ data, setData, onShowPhoto }) {
 
   const onOpenLink = qid => { markQuestionDone(qid); setLinkView({ qid }); };
 
-  // スマホでは左右になぞってタブを移す。
-  // 入力や写真をつまんでいるときは邪魔しないよう、対象を見てから判定する。
-  function swipeStart(e) {
-    if (!isPhone || e.touches.length !== 1) { swipe.current = null; return; }
-    if (e.target.closest('input, select, textarea, .xl-grip, .xl-thumb, .cal-table')) { swipe.current = null; return; }
-    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
-
-  function swipeEnd(e) {
-    const st = swipe.current;
-    swipe.current = null;
-    if (!st || !e.changedTouches || !e.changedTouches.length) return;
-    const dx = e.changedTouches[0].clientX - st.x;
-    const dy = e.changedTouches[0].clientY - st.y;
-    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    setTab(dx < 0 ? 'units' : 'draw');
-  }
-
   return h('div', { className: 'px-6 py-6 pb-safe xl-pad' },
-    h('div', { className: 'flex items-center justify-between mb-3' },
+    // スマホは左右になぞって移るので、タブのボタンは出さない
+    (!isPhone || msg) && h('div', { className: 'flex items-center justify-between mb-3' },
       h('div', { className: 'flex gap-1' },
-        h('button', {
+        !isPhone && h('button', {
           onClick: () => setTab('draw'),
           className: `text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors ${tab === 'draw' ? 'bg-gray-100 text-gray-900' : 'bg-gray-900 text-gray-400 hover:text-white'}`
         }, '出題'),
-        h('button', {
+        !isPhone && h('button', {
           onClick: () => setTab('units'),
           className: `text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors ${tab === 'units' ? 'bg-gray-100 text-gray-900' : 'bg-gray-900 text-gray-400 hover:text-white'}`
         }, '単元管理')
       ),
       msg && h('span', { className: 'text-xs text-green-300' }, msg)
     ),
-    h('div', { onTouchStart: swipeStart, onTouchEnd: swipeEnd },
-      tab === 'draw'
-        ? h(DrawPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink, progress, setProgress, markQuestionDone })
-        : h(UnitsPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink })
-    ),
-    isPhone && h('div', { style: { fontSize: '11px', color: '#6b7280', textAlign: 'center', marginTop: '6px' } },
-      '← 左右になぞるとタブを移動できます →'),
+    tab === 'draw'
+      ? h(DrawPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink, progress, setProgress, markQuestionDone })
+      : h(UnitsPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink }),
 
     linkView && (() => {
       const u = data.units.find(x => x.questions.some(q => q.id === linkView.qid));
@@ -2662,6 +2621,12 @@ function PomodoroTimer() {
 }
 
 // ── アプリ本体 ────────────────────────────────────────────────────────────────
+// スマホは左右になぞってこの順に移る
+const SCREENS = [
+  { id: 'draw', label: '出題' },
+  { id: 'units', label: '単元管理' },
+  { id: 'calendar', label: 'カレンダー' },
+];
 const NAV_TABS = [
   { id: 'practice', label: '🎲 過去問演習' },
   { id: 'calendar', label: '📅 カレンダー' },
@@ -2671,7 +2636,33 @@ const UNDO_LIMIT = 50;
 
 function App() {
   const isPhone = useIsPhone();
-  const [mode, setMode] = useState('practice');
+  // 画面は 出題 → 単元管理 → カレンダー の並び。なぞって前後に移る。
+  const [tab, setTab] = useState('draw');
+  const mode = tab === 'calendar' ? 'calendar' : 'practice';
+  const setMode = id => setTab(id === 'calendar' ? 'calendar' : 'draw');
+  const swipe = useRef(null);
+
+  // 入力欄や写真、並べ替えのつまみをさわっているときは、なぞりと見なさない
+  function swipeStart(e) {
+    if (!isPhone || e.touches.length !== 1
+        || e.target.closest('input, select, textarea, .xl-grip, .xl-thumb, iframe')) {
+      swipe.current = null;
+      return;
+    }
+    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+
+  function swipeEnd(e) {
+    const st = swipe.current;
+    swipe.current = null;
+    if (!st || !e.changedTouches || !e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - st.x;
+    const dy = e.changedTouches[0].clientY - st.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const i = SCREENS.findIndex(sc => sc.id === tab);
+    const next = Math.min(SCREENS.length - 1, Math.max(0, i + (dx < 0 ? 1 : -1)));
+    setTab(SCREENS[next].id);
+  }
   const [data, setDataRaw] = useLocalStorageState(STORAGE_KEY, DEFAULT_DATA);
   const [photoView, setPhotoView] = useState(null); // { qid, index }
   const [history, setHistory] = useState({ undo: 0, redo: 0 });
@@ -2757,9 +2748,30 @@ function App() {
         )
       )
     ),
-    mode === 'practice'
-      ? h(PracticeHub, { data, setData, onShowPhoto: (qid, index) => setPhotoView({ qid, index: index || 0 }) })
-      : h(CalendarPage, { data, setData }),
+    h('div', { onTouchStart: swipeStart, onTouchEnd: swipeEnd },
+      mode === 'practice'
+        ? h(PracticeHub, {
+            data, setData, tab, setTab,
+            onShowPhoto: (qid, index) => setPhotoView({ qid, index: index || 0 }),
+          })
+        : h(CalendarPage, { data, setData }),
+      // スマホはタブのボタンを出さないので、いまどこにいるかだけ示す
+      isPhone && h('div', {
+        className: 'screen-now',
+        style: {
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          padding: '10px 0 18px', fontSize: '12px', color: '#9ca3af',
+        },
+      },
+        h('span', null, '←'),
+        SCREENS.map(sc => h('span', {
+          key: sc.id,
+          className: sc.id === tab ? 'on' : '',
+          style: sc.id === tab ? { color: '#e5e7eb', fontWeight: 700 } : { color: '#6b7280' },
+        }, sc.id === tab ? sc.label : '・')),
+        h('span', null, '→')
+      )
+    ),
     photoView && (() => {
       const qid = photoView.qid;
       const unit = data.units.find(u => u.questions.some(q => q.id === qid));
