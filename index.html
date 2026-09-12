@@ -60,7 +60,47 @@
   .xl-dragging td { opacity:.4; }
   .xl-drop-before td { box-shadow:inset 0 2px 0 0 #217346; }
   .xl-drop-after td { box-shadow:inset 0 -2px 0 0 #217346; }
-  .xl-link { color:#1155cc; text-decoration:none; font-family:inherit; font-size:13px; padding:0; }
+    .xl-link { color:#1155cc; text-decoration:none; font-family:inherit; font-size:13px; padding:0; }
+
+  /* 正解ボタン。押すと数字が跳ねて、輪が広がる（暫定のエフェクト） */
+  .ok-btn {
+    position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
+    background: #eafaf0; border: 1px solid #9ad9b4; color: #12703c; border-radius: 6px;
+    padding: 10px 12px; font-size: 15px; font-family: inherit; cursor: pointer; line-height: 1;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .ok-btn .n { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 12px; text-align: center; }
+  .ok-btn.pop { animation: okpop .45s cubic-bezier(.2,1.6,.4,1); background: #b9f3d0; border-color: #3fbf78; }
+  .ok-btn.pop .n { animation: oknum .45s cubic-bezier(.2,1.8,.3,1); }
+  .ok-btn.pop::after {
+    content: ''; position: absolute; inset: -6px; border-radius: 12px;
+    border: 2px solid #35c47a; animation: okring .55s ease-out forwards; pointer-events: none;
+  }
+  @keyframes okpop { 0% { transform: scale(1); } 35% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  @keyframes oknum { 0% { transform: translateY(0) scale(1); } 30% { transform: translateY(-6px) scale(1.5); } 100% { transform: translateY(0) scale(1); } }
+  @keyframes okring { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.5); } }
+  .spark { position: fixed; pointer-events: none; z-index: 70; font-size: 20px; animation: sparkfly .7s ease-out forwards; }
+  @keyframes sparkfly { 0% { opacity: 1; transform: translate(0,0) scale(.6); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.2); } }
+
+  /* 単元のメーターと、今日の目標の球 */
+  .gauge { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border-bottom: 1px solid #d9d9d9; }
+  .gauge .meter { flex: 1 1 auto; min-width: 0; }
+  .gauge .bar { height: 12px; border-radius: 999px; background: #e8e8e8; overflow: hidden; }
+  .gauge .bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#39b56a,#7fe3a5); transition: width .5s cubic-bezier(.2,.9,.3,1); }
+  .gauge .cap { font-size: 11px; color: #666; display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .ball { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 50%; position: relative; overflow: hidden;
+          border: 2px solid #b9cfe8; background: #f2f7fd; cursor: pointer; }
+  .ball > i { position: absolute; left: -25%; width: 150%; bottom: 0; height: 0;
+              background: linear-gradient(180deg,#5db2f0,#2d7fd0); transition: height .6s cubic-bezier(.2,.9,.3,1); }
+  .ball > i::before, .ball > i::after {
+    content: ''; position: absolute; top: -6px; left: 0; width: 100%; height: 12px; border-radius: 50%;
+    background: inherit;
+  }
+  .ball > i::after { opacity: .6; animation: wave 3s linear infinite; }
+  @keyframes wave { 0% { transform: translateX(-12%); } 50% { transform: translateX(12%); } 100% { transform: translateX(-12%); } }
+  .ball .lab { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+               font-size: 12px; font-weight: 700; color: #123; text-shadow: 0 1px 2px rgba(255,255,255,.8); }
+  .ball.full { border-color: #3fbf78; box-shadow: 0 0 0 3px rgba(63,191,120,.25); }
   .xl-link:hover { text-decoration:underline; }
   .xl-url { flex:1 1 auto; min-width:0; border:1px solid transparent; background:transparent; font-family:inherit; font-size:13px; color:#1f2328; padding:3px 4px; border-radius:2px; }
   .xl-url:hover { border-color:#c4c4c4; background:#fff; }
@@ -125,6 +165,24 @@
       font-family: inherit; cursor: pointer;
     }
     .q-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+    /* 出題中の1問1行（No・問題を開く・正解・写真をすべて横並び） */
+    .q-line {
+      display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+      border-bottom: 1px solid #e6e6e6; background: #fff; min-height: 56px; box-sizing: border-box;
+    }
+    .q-line .no {
+      flex: 0 0 auto; min-width: 34px; text-align: right; font-size: 13px; color: #666;
+      font-variant-numeric: tabular-nums;
+    }
+    .q-line .open {
+      flex: 1 1 auto; min-width: 0; text-align: center; background: #eef4ff; border: 1px solid #b6cdf5;
+      color: #1155cc; border-radius: 6px; padding: 11px 6px; font-size: 14px; font-family: inherit;
+      cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;
+    }
+    .q-line .open.none { background: #f4f4f4; border-color: #ddd; color: #999; cursor: default; }
+    .q-line .shot { flex: 0 0 auto; }
+    .q-line .shot .xl-thumb { height: 40px; }
     .q-row label { font-size: 13px; color: #555; }
     .q-row select { font-size: 16px; padding: 8px; border: 1px solid #b0b0b0; border-radius: 3px; background: #fff; }
     .q-photos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
@@ -133,6 +191,7 @@
 
     /* カレンダーは日付を小さく、書き込みは下の欄で */
     .cal-table td { height: 44px; }
+    .q-line { min-height: 52px; }
     .cal-table th { padding: 4px; text-align: center; }
     .cal-day { justify-content: center; padding: 2px; }
     .cal-memo { display: none; }
@@ -160,6 +219,54 @@ function loadDraw() {
 
 function saveDraw(state) {
   try { localStorage.setItem(DRAW_KEY, JSON.stringify(state)); } catch {}
+}
+
+// 今日の進み具合と目標。端末ごとの記録なので、取り消し履歴には乗せない
+// （問題を開くたびに履歴が埋まると、単元整理のやり直しができなくなるため）。
+const PROGRESS_KEY = 'feExamProgress';
+const DEFAULT_GOAL = 20;
+const KEEP_DAYS = 180;
+
+function loadProgress() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+    return {
+      goal: Number(raw.goal) > 0 ? Number(raw.goal) : DEFAULT_GOAL,
+      daily: raw.daily && typeof raw.daily === 'object' ? raw.daily : {},
+    };
+  } catch { return { goal: DEFAULT_GOAL, daily: {} }; }
+}
+
+function saveProgress(p) {
+  try {
+    // 古い日は落として、際限なく溜まらないようにする
+    const days = Object.keys(p.daily).sort().slice(-KEEP_DAYS);
+    const daily = {};
+    days.forEach(d => { daily[d] = p.daily[d]; });
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ goal: p.goal, daily }));
+  } catch {}
+}
+
+// その日に手をつけた問題を数える（同じ問題を何度触っても1つ）
+function markDone(prev, qid) {
+  const day = todayStr();
+  const list = prev.daily[day] || [];
+  if (list.includes(qid)) return prev;
+  const next = { ...prev, daily: { ...prev.daily, [day]: [...list, qid] } };
+  saveProgress(next);
+  return next;
+}
+
+function doneToday(p) {
+  return (p.daily[todayStr()] || []).length;
+}
+
+// 単元の進み具合＝正解が1回以上ついた問題の割合
+function unitProgress(unit, records) {
+  const total = unit ? unit.questions.length : 0;
+  if (!total) return { done: 0, total: 0, rate: 0 };
+  const done = unit.questions.filter(q => ((records[q.id] || {}).correct || 0) > 0).length;
+  return { done, total, rate: done / total };
 }
 // 最初に開いたときの中身。送ってもらった単元マスタ（単元名・m・s・問題数）から
 // URLを組み立てて入れてある。単元管理タブで削除・追加・貼り替えができる。
@@ -224,6 +331,7 @@ function migrate(data) {
   return { ...data, photos, themes, units };
 }
 const COUNT_OPTIONS = Array.from({ length: 21 }, (_, i) => i);
+const COUNT_MAX = COUNT_OPTIONS[COUNT_OPTIONS.length - 1];
 
 function useLocalStorageState(key, initial) {
   const [state, setState] = useState(() => {
@@ -654,12 +762,6 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
         onChange: e => onSetCount('correct', Number(e.target.value)),
         className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
       }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
-      onSetCount && h('span', { className: 'text-xs text-gray-400' }, '不正解'),
-      onSetCount && h('select', {
-        title: '不正解回数', value: record.wrong,
-        onChange: e => onSetCount('wrong', Number(e.target.value)),
-        className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
-      }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
       h('span', { style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' } },
         h('button', {
           onClick: () => changeZoom(zoom - 0.1), disabled: zoom <= ZOOM_MIN, title: '表示を小さくする',
@@ -991,6 +1093,101 @@ function PhotoModal({ ids, index, onIndex, onClose, onDelete, moveTargets, curre
   );
 }
 
+// ── 正解ボタン（押すと1回ぶん増えて、その場で弾ける）──────────────────────────
+// 押し間違いは長押しで1つ戻せる（プルダウンを置くと横幅が足りないため）
+function CorrectButton({ count, onAdd, onUndo }) {
+  const [pop, setPop] = useState(0);
+  const held = useRef(false);
+  const timer = useRef(null);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  function burst(el) {
+    if (!el || typeof document === 'undefined') return;
+    const b = el.getBoundingClientRect();
+    ['✨', '⭐', '✨'].forEach((mark, i) => {
+      const sp = document.createElement('span');
+      sp.className = 'spark';
+      sp.textContent = mark;
+      sp.style.left = `${b.left + b.width / 2 - 10}px`;
+      sp.style.top = `${b.top + b.height / 2 - 10}px`;
+      sp.style.setProperty('--dx', `${(i - 1) * 34}px`);
+      sp.style.setProperty('--dy', `${-30 - i * 8}px`);
+      document.body.appendChild(sp);
+      setTimeout(() => sp.remove(), 800);
+    });
+  }
+
+  function press(e) {
+    held.current = false;
+    timer.current = setTimeout(() => { held.current = true; if (onUndo) onUndo(); }, 650);
+  }
+
+  function release(e) {
+    clearTimeout(timer.current);
+    if (held.current) return;      // 長押しで1つ戻したときは足さない
+    setPop(n => n + 1);
+    burst(e.currentTarget);
+    onAdd();
+  }
+
+  return h('button', {
+    className: 'ok-btn' + (pop ? ' pop' : ''),
+    key: `ok${pop}`,
+    title: '正解（長押しで1つ戻す）',
+    onPointerDown: press,
+    onPointerUp: release,
+    onPointerLeave: () => clearTimeout(timer.current),
+    onPointerCancel: () => clearTimeout(timer.current),
+  }, h('span', null, '✓'), h('span', { className: 'n' }, count));
+}
+
+// ── 単元のメーターと、今日の目標の球 ─────────────────────────────────────────
+function GaugeBar({ unit, records, progress, onSetGoal }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(progress.goal));
+  const { done, total, rate } = unitProgress(unit, records);
+  const today = doneToday(progress);
+  const filled = progress.goal > 0 ? Math.min(1, today / progress.goal) : 0;
+
+  function commit() {
+    const n = Math.max(1, Math.min(999, Number(draft) || 1));
+    onSetGoal(n);
+    setDraft(String(n));
+    setEditing(false);
+  }
+
+  return h('div', { className: 'gauge' },
+    h('div', { className: 'meter' },
+      h('div', { className: 'cap' },
+        h('span', null, unit ? `${unit.name} の進み具合` : '単元の進み具合'),
+        h('span', null, `${done} / ${total} 問（${Math.round(rate * 100)}%）`)
+      ),
+      h('div', { className: 'bar', title: '正解が1回以上ついた問題の割合' },
+        h('i', { style: { width: `${Math.round(rate * 100)}%` } })),
+      editing && h('div', { style: { marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' } },
+        h('span', { style: { fontSize: '12px', color: '#555' } }, '1日の目標'),
+        h('input', {
+          type: 'number', min: 1, max: 999, value: draft, title: '1日の目標',
+          style: { width: '80px', fontSize: '16px' },
+          onChange: e => setDraft(e.target.value),
+          onKeyDown: e => { if (e.key === 'Enter') commit(); },
+        }),
+        h('span', { style: { fontSize: '12px', color: '#555' } }, '問'),
+        h('button', { className: 'xl-btn', onClick: commit }, '決定')
+      )
+    ),
+    h('div', {
+      className: 'ball' + (filled >= 1 ? ' full' : ''),
+      title: `今日 ${today} / ${progress.goal} 問（押すと目標を変えられます）`,
+      onClick: () => setEditing(v => !v),
+    },
+      h('i', { style: { height: `${Math.round(filled * 100)}%` } }),
+      h('span', { className: 'lab' }, filled >= 1 ? '達成!' : `${today}/${progress.goal}`)
+    )
+  );
+}
+
 // ── 写真セル（セル内にサムネイル。複数枚並ぶ）─────────────────────────────────
 function PhotoThumb({ pid, onOpen }) {
   const [thumb, setThumb] = useState('');
@@ -1025,6 +1222,7 @@ function PhotoCell({ pids, isTarget, onOpen, onPick }) {
 function QuestionSheet({
   questions, nos, data, onSetUrl, onSetCount, onOpenPhoto, onPickPhoto,
   pasteTarget, onDeleteRow, onDuplicate, onReorder, scrollSignal, emptyText, onOpenLink,
+  compact, onCorrect,
 }) {
   const isPhone = useIsPhone();
   const scroller = useRef(null);
@@ -1043,6 +1241,36 @@ function QuestionSheet({
 
   if (!questions.length) {
     return h('div', { className: 'xl-empty' }, emptyText || 'まだ問題がありません。');
+  }
+
+  // スマホで問題を解いているときは、1問1行にして5問ぶん画面に収める
+  if (isPhone && compact) {
+    return h('div', { className: 'xl-scroll', ref: scroller },
+      questions.map((q, i) => {
+        const r = data.records[q.id] || { correct: 0, wrong: 0 };
+        const no = nos ? nos[i] : i + 1;
+        const pids = photoIdsOf(data.photos, q.id);
+        return h('div', { className: 'q-line', key: q.id },
+          h('span', { className: 'no' }, no),
+          q.url
+            ? h('button', { className: 'open', onClick: () => onOpenLink && onOpenLink(q.id) }, '問題を開く →')
+            : h('span', { className: 'open none' }, pids.length ? '写真を見る' : 'URLなし'),
+          h(CorrectButton, {
+            count: r.correct,
+            onAdd: () => onCorrect(q.id),
+            onUndo: () => onSetCount(q.id, 'correct', Math.max(0, r.correct - 1)),
+          }),
+          h('span', { className: 'shot' },
+            pids.length
+              ? h(PhotoThumb, { pid: pids[0], onOpen: () => onOpenPhoto(q.id, 0) })
+              : h('button', {
+                  className: 'xl-btn xl-btn-sub', style: { padding: '8px 10px' },
+                  onClick: () => onPickPhoto(q.id),
+                }, '📷')),
+          pids.length > 1 && h('span', { style: { fontSize: '11px', color: '#888' } }, `+${pids.length - 1}`)
+        );
+      })
+    );
   }
 
   // スマホでは表が入りきらないので、1問1枚のカードにする
@@ -1093,10 +1321,11 @@ function QuestionSheet({
             h('select', {
               value: r.correct, onChange: e => onSetCount(q.id, 'correct', Number(e.target.value)),
             }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
-            h('label', null, '不正解'),
-            h('select', {
-              value: r.wrong, onChange: e => onSetCount(q.id, 'wrong', Number(e.target.value)),
-            }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n)))
+            onCorrect && h(CorrectButton, {
+              count: r.correct,
+              onAdd: () => onCorrect(q.id),
+              onUndo: () => onSetCount(q.id, 'correct', Math.max(0, r.correct - 1)),
+            })
           ),
 
           h('div', { className: 'q-photos' },
@@ -1120,7 +1349,6 @@ function QuestionSheet({
           h('th', { className: 'xl-rownum', style: { top: 0 } }, 'No'),
           h('th', { className: 'xl-col-url' }, '問題URL'),
           h('th', null, '正解回数'),
-          h('th', null, '不正解回数'),
           h('th', { className: 'xl-col-photo' }, '写真'),
           (onDeleteRow || onDuplicate) && h('th', null, '')
         )
@@ -1183,17 +1411,16 @@ function QuestionSheet({
                       }, '開く →'))
                 : null
             )),
-            h('td', null, h('div', { className: 'xl-cell', style: { padding: '2px 6px' } },
+            h('td', null, h('div', { className: 'xl-cell', style: { padding: '2px 6px', display: 'flex', alignItems: 'center', gap: '6px' } },
               h('select', {
                 className: 'xl-select', value: r.correct,
                 onChange: e => onSetCount(q.id, 'correct', Number(e.target.value))
-              }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n)))
-            )),
-            h('td', null, h('div', { className: 'xl-cell', style: { padding: '2px 6px' } },
-              h('select', {
-                className: 'xl-select', value: r.wrong,
-                onChange: e => onSetCount(q.id, 'wrong', Number(e.target.value))
-              }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n)))
+              }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
+              onCorrect && h(CorrectButton, {
+                count: r.correct,
+                onAdd: () => onCorrect(q.id),
+                onUndo: () => onSetCount(q.id, 'correct', Math.max(0, r.correct - 1)),
+              })
             )),
             h('td', null, h(PhotoCell, {
               pids: photoIdsOf(data.photos, q.id),
@@ -1219,13 +1446,13 @@ function QuestionSheet({
 }
 
 // ── 出題ページ ────────────────────────────────────────────────────────────────
-function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
+function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progress, setProgress, markQuestionDone }) {
+  const isPhone = useIsPhone();
   const { theme, unitsOfTheme, unit, setThemeId, setUnitId } = sel;
   // 前回の続きから始められるように、条件と抽選結果を読み戻す（同じ単元のときだけ）
   const saved = useRef(loadDraw());
   const prev = saved.current && unit && saved.current.unitId === unit.id ? saved.current : null;
   const [filterCorrect, setFilterCorrect] = useState(prev ? (prev.filterCorrect || '') : '');
-  const [filterWrong, setFilterWrong] = useState(prev ? (prev.filterWrong || '') : '');
   const [count, setCount] = useState(prev && prev.count ? prev.count : 5);
   const [rangeStart, setRangeStart] = useState(prev && prev.rangeStart ? prev.rangeStart : 1);
   const [rangeEnd, setRangeEnd] = useState(prev ? (prev.rangeEnd || 0) : 0); // 0 は「最後まで」
@@ -1255,9 +1482,9 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
     if (!unit) return;
     saveDraw({
       themeId: theme ? theme.id : '', unitId: unit.id,
-      rangeStart, rangeEnd, filterCorrect, filterWrong, count, results,
+      rangeStart, rangeEnd, filterCorrect, count, results,
     });
-  }, [theme ? theme.id : '', unit ? unit.id : '', rangeStart, rangeEnd, filterCorrect, filterWrong, count, results]);
+  }, [theme ? theme.id : '', unit ? unit.id : '', rangeStart, rangeEnd, filterCorrect, count, results]);
 
   useWindowPaste(!!pasteTarget, clipboard => {
     const files = imageFilesFrom(clipboard, true);
@@ -1283,7 +1510,6 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
     if (item.no < rangeStart || item.no > endNo) return false;
     const r = data.records[item.q.id] || { correct: 0, wrong: 0 };
     if (filterCorrect !== '' && r.correct !== Number(filterCorrect)) return false;
-    if (filterWrong !== '' && r.wrong !== Number(filterWrong)) return false;
     return true;
   }) : [];
 
@@ -1297,8 +1523,59 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
 
   const filterClass = 'bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white';
 
+  const themeSelect = h('select', {
+    title: 'テーマ', value: theme ? theme.id : '', onChange: e => setThemeId(e.target.value),
+    style: isPhone ? { width: '100%', minWidth: 0 } : { minWidth: '180px' },
+  }, data.themes.map(t => h('option', { key: t.id, value: t.id }, t.name)));
+
+  const unitSelect = h('select', {
+    title: '単元', value: unit ? unit.id : '', onChange: e => setUnitId(e.target.value),
+    style: isPhone ? { width: '100%', minWidth: 0 } : { minWidth: '200px' },
+  }, unitsOfTheme.map(u => h('option', { key: u.id, value: u.id }, `${u.name}（全${u.questions.length}問）`)));
+
+  const drawButton = h('button', {
+    className: 'xl-btn',
+    disabled: pool.length === 0,
+    onClick: () => { setResults(sample(pool, count).map(item => item.q.id)); setPasteTarget(null); },
+  }, shown.length ? '🎲 再抽選' : '🎲 抽選する');
+
+  const numBox = (title, value, onChange, extra) => h('input', {
+    title, type: 'number', min: 1, value, onChange,
+    style: { width: '100%', minWidth: 0, fontSize: '16px', padding: '6px 4px', textAlign: 'center' },
+    ...(extra || {}),
+  });
+
+  // スマホは「テーマ・単元」で1行、「開始・終了・数・正解・抽選」で1行に詰める
+  const phoneToolbar = h('div', { className: 'xl-toolbar', style: { padding: '6px 8px' } },
+    h('div', { style: { display: 'flex', gap: '6px' } },
+      h('div', { style: { flex: '1 1 0', minWidth: 0 } }, themeSelect),
+      h('div', { style: { flex: '1 1 0', minWidth: 0 } }, unitSelect)
+    ),
+    h('div', { style: { display: 'flex', gap: '4px', alignItems: 'flex-end', marginTop: '6px' } },
+      h('div', { style: { flex: '1 1 0', minWidth: 0 } },
+        h('label', { className: 'xl-label' }, '開始'),
+        numBox('開始No', rangeStart, e => setRangeStart(Math.max(1, Number(e.target.value) || 1)), { max: total || 1 })),
+      h('div', { style: { flex: '1 1 0', minWidth: 0 } },
+        h('label', { className: 'xl-label' }, '終了'),
+        numBox('終了No', endNo, e => setRangeEnd(Math.max(1, Number(e.target.value) || 1)), { max: total || 1 })),
+      h('div', { style: { flex: '1 1 0', minWidth: 0 } },
+        h('label', { className: 'xl-label' }, '出題'),
+        numBox('出題数', count, e => setCount(Math.max(1, Number(e.target.value) || 1)))),
+      h('div', { style: { flex: '1.3 1 0', minWidth: 0 } },
+        h('label', { className: 'xl-label' }, '正解数'),
+        h('select', {
+          title: '正解回数', value: filterCorrect, onChange: e => setFilterCorrect(e.target.value),
+          style: { width: '100%', minWidth: 0, fontSize: '16px', padding: '6px 2px' },
+        },
+          h('option', { value: '' }, '指定なし'),
+          COUNT_OPTIONS.map(n => h('option', { key: n, value: String(n) }, `${n}回`))
+        )),
+      h('div', { style: { flex: '0 0 auto' } }, drawButton)
+    )
+  );
+
   return h('div', { className: 'xl-app' },
-    h('div', { className: 'xl-toolbar flex flex-wrap items-end gap-4' },
+    isPhone ? phoneToolbar : h('div', { className: 'xl-toolbar flex flex-wrap items-end gap-4' },
       h('div', { className: 'xl-field-wide' },
         h('label', { className: 'xl-label' }, 'テーマ'),
         h('select', { title: 'テーマ', value: theme ? theme.id : '', onChange: e => setThemeId(e.target.value), style: { minWidth: '180px' } },
@@ -1333,25 +1610,19 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
         )
       ),
       h('div', null,
-        h('label', { className: 'xl-label' }, '不正解回数'),
-        h('select', { title: '不正解回数', value: filterWrong, onChange: e => setFilterWrong(e.target.value) },
-          h('option', { value: '' }, '指定なし'),
-          COUNT_OPTIONS.map(n => h('option', { key: n, value: String(n) }, `${n} 回`))
-        )
-      ),
-      h('div', null,
         h('label', { className: 'xl-label' }, '出題数'),
         h('input', {
           title: '出題数', type: 'number', min: 1, value: count, style: { width: '80px' },
           onChange: e => setCount(Math.max(1, Number(e.target.value) || 1))
         })
       ),
-      h('button', {
-        className: 'xl-btn',
-        disabled: pool.length === 0,
-        onClick: () => { setResults(sample(pool, count).map(item => item.q.id)); setPasteTarget(null); }
-      }, results.length ? '🎲 再抽選' : '🎲 抽選する')
+      drawButton
     ),
+
+    h(GaugeBar, {
+      unit, records: data.records, progress,
+      onSetGoal: n => setProgress(pv => { const next = { ...pv, goal: n }; saveProgress(next); return next; }),
+    }),
 
     pasteTarget && h('div', { className: 'xl-target' }, '写真の貼り付け先を選択中です。Ctrl+V で貼り付けてください。'),
 
@@ -1362,7 +1633,13 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
           onSetCount: (qid, field, value) => setCountFor(qid, field, value, setData),
           onOpenPhoto: onShowPhoto,
           onPickPhoto: qid => setPasteTarget(pasteTarget === qid ? null : qid),
-          pasteTarget, onOpenLink,
+          pasteTarget, onOpenLink, compact: true,
+          // 正解を押したら回数を1つ増やし、その日「手をつけた問題」にも数える
+          onCorrect: qid => {
+            const now = (data.records[qid] || {}).correct || 0;
+            setCountFor(qid, 'correct', Math.min(COUNT_MAX, now + 1), setData);
+            markQuestionDone(qid);
+          },
         }),
 
     h('div', { className: 'xl-status' },
@@ -1429,7 +1706,7 @@ function UnitsPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
       }),
       photos: newPids.length ? { ...d.photos, [copy.id]: newPids } : d.photos,
     }));
-    setMsg(`問題をコピーしました（写真${newPids.length}枚も複製。正解・不正解の回数は0から）`);
+    setMsg(`問題をコピーしました（写真${newPids.length}枚も複製。正解回数は0から）`);
   }
 
   // ドラッグした問題を、落とした行の前（または後ろ）へ移す
@@ -2075,6 +2352,12 @@ function PracticeHub({ data, setData, onShowPhoto }) {
   const [tab, setTab] = useState('draw');
   const [msg, setMsg] = useState('');
   const [linkView, setLinkView] = useState(null); // アプリの中で開いている問題
+  const [progress, setProgress] = useState(() => loadProgress());
+  const isPhone = useIsPhone();
+  const swipe = useRef(null);
+
+  // 「手をつけた問題」を今日の分に数える（同じ問題は1回だけ）
+  const markQuestionDone = qid => setProgress(p => markDone(p, qid));
   // 前に開いていた単元をそのまま開き直す（毎回選び直さなくて済むように）
   const restored = useRef(loadDraw());
   // テーマと単元の選択はタブをまたいで保つ
@@ -2100,7 +2383,25 @@ function PracticeHub({ data, setData, onShowPhoto }) {
     return () => clearTimeout(id);
   }, [msg]);
 
-  const onOpenLink = qid => setLinkView({ qid });
+  const onOpenLink = qid => { markQuestionDone(qid); setLinkView({ qid }); };
+
+  // スマホでは左右になぞってタブを移す。
+  // 入力や写真をつまんでいるときは邪魔しないよう、対象を見てから判定する。
+  function swipeStart(e) {
+    if (!isPhone || e.touches.length !== 1) { swipe.current = null; return; }
+    if (e.target.closest('input, select, textarea, .xl-grip, .xl-thumb, .cal-table')) { swipe.current = null; return; }
+    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+
+  function swipeEnd(e) {
+    const st = swipe.current;
+    swipe.current = null;
+    if (!st || !e.changedTouches || !e.changedTouches.length) return;
+    const dx = e.changedTouches[0].clientX - st.x;
+    const dy = e.changedTouches[0].clientY - st.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    setTab(dx < 0 ? 'units' : 'draw');
+  }
 
   return h('div', { className: 'px-6 py-6 pb-safe xl-pad' },
     h('div', { className: 'flex items-center justify-between mb-3' },
@@ -2116,9 +2417,13 @@ function PracticeHub({ data, setData, onShowPhoto }) {
       ),
       msg && h('span', { className: 'text-xs text-green-300' }, msg)
     ),
-    tab === 'draw'
-      ? h(DrawPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink })
-      : h(UnitsPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink }),
+    h('div', { onTouchStart: swipeStart, onTouchEnd: swipeEnd },
+      tab === 'draw'
+        ? h(DrawPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink, progress, setProgress, markQuestionDone })
+        : h(UnitsPage, { data, setData, onShowPhoto, setMsg, sel, onOpenLink })
+    ),
+    isPhone && h('div', { style: { fontSize: '11px', color: '#6b7280', textAlign: 'center', marginTop: '6px' } },
+      '← 左右になぞるとタブを移動できます →'),
 
     linkView && (() => {
       const u = data.units.find(x => x.questions.some(q => q.id === linkView.qid));
