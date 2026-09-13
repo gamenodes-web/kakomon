@@ -249,6 +249,54 @@
     display:inline-flex; align-items:center; justify-content:center;
   }
 
+  /* ── 単元の一覧（丸い番号・単元名・問題数）───────────────────────────── */
+  .unit-list { padding:4px 2px 8px; }
+  .unit-row {
+    display:flex; align-items:center; gap:14px; width:100%; padding:0 6px;
+    background:none; border:0; font-family:inherit; cursor:pointer; text-align:left;
+    position:relative; min-height:78px;
+  }
+  /* 丸どうしをつなぐ縦線 */
+  .unit-row .rail { position:relative; flex:0 0 auto; width:48px; height:78px; display:grid; place-items:center; }
+  .unit-row .rail::before {
+    content:''; position:absolute; left:50%; top:0; bottom:0; width:2px; margin-left:-1px; background:var(--line);
+  }
+  .unit-row:first-child .rail::before { top:50%; }
+  .unit-row:last-child .rail::before { bottom:50%; }
+  .unit-row .num {
+    position:relative; width:48px; height:48px; border-radius:50%; display:grid; place-items:center;
+    background:var(--surface); border:2px solid var(--line); color:var(--ink);
+    font-size:17px; font-weight:800; font-variant-numeric:tabular-nums;
+  }
+  .unit-row.on .num { border-color:var(--accent); background:var(--accent); color:var(--accent-ink); }
+  .unit-row .body { flex:1 1 auto; min-width:0; }
+  .unit-row .name {
+    display:block; font-size:16px; font-weight:800; color:var(--ink);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .unit-row.on .name { color:var(--accent); }
+  .unit-row .sub { display:block; font-size:12px; color:var(--muted); font-weight:700; margin-top:3px; }
+  .unit-row .count {
+    flex:0 0 auto; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface);
+    padding:9px 12px; font-size:13px; color:var(--muted); font-weight:700; white-space:nowrap;
+  }
+  .unit-row .count b { font-size:16px; color:var(--ink); font-weight:800; }
+  .unit-head { display:flex; align-items:center; gap:8px; padding:2px 4px 10px; }
+  .unit-head .t { font-size:13px; font-weight:800; color:var(--muted); }
+  .unit-back {
+    display:flex; align-items:center; gap:10px; width:100%; background:var(--surface); border:0;
+    border-radius:var(--r); box-shadow:var(--shadow); padding:11px 14px; margin-bottom:10px;
+    font-family:inherit; cursor:pointer; text-align:left;
+  }
+  .unit-back .arrow { flex:0 0 auto; font-size:15px; color:var(--muted); }
+  .unit-back .who { flex:1 1 auto; min-width:0; }
+  .unit-back .who .u { display:block; font-size:11px; color:var(--muted); font-weight:700; }
+  .unit-back .who .n {
+    display:block; font-size:16px; font-weight:800; color:var(--ink);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .unit-back .go { flex:0 0 auto; font-size:12px; color:var(--accent); font-weight:800; }
+
   /* ── 設定画面 ───────────────────────────────────────────────────────── */
   .set-body-scroll { flex:1 1 auto; overflow:auto; background:var(--bg); padding:12px; }
   .set-row { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:14px; margin-bottom:10px; }
@@ -1848,6 +1896,35 @@ function QuestionSheet({
   );
 }
 
+// ── 単元の一覧（丸い番号・単元名・問題数。タップで選ぶ）───────────────────────
+function UnitList({ theme, units, unitId, themes, onPickTheme, onPick, extra }) {
+  return h('div', null,
+    themes && themes.length > 1 && h('div', { className: 'unit-head' },
+      h('span', { className: 't' }, 'テーマ'),
+      h('div', { className: 'set-chips' },
+        themes.map(t => h('button', {
+          key: t.id, className: 'v-opt' + (theme && t.id === theme.id ? ' on' : ''),
+          onClick: () => onPickTheme(t.id),
+        }, t.name)))
+    ),
+    units.length === 0
+      ? h('div', { className: 'xl-empty' }, 'このテーマには単元がありません。')
+      : h('div', { className: 'unit-list' },
+          units.map((u, i) => {
+            return h('button', {
+              key: u.id, className: 'unit-row' + (u.id === unitId ? ' on' : ''),
+              onClick: () => onPick(u.id),
+            },
+              h('span', { className: 'rail' }, h('span', { className: 'num' }, i + 1)),
+              h('span', { className: 'body' },
+                h('span', { className: 'name' }, u.name)),
+              h('span', { className: 'count' }, h('b', null, u.questions.length), '問')
+            );
+          })),
+    extra
+  );
+}
+
 // ── 出題ページ ────────────────────────────────────────────────────────────────
 function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progress, setProgress, markQuestionDone }) {
   const isPhone = useIsPhone();
@@ -1866,6 +1943,8 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progres
     return (prev.results || []).filter(id => ids.has(id));
   });
   const [pasteTarget, setPasteTarget] = useState(null);
+  // 単元をまだ選んでいなければ一覧から始める
+  const [picking, setPicking] = useState(() => !(prev && prev.unitId));
 
   const total = unit ? unit.questions.length : 0;
   const endNo = rangeEnd > 0 ? Math.min(rangeEnd, total) : total;
@@ -1903,10 +1982,17 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progres
     return true;
   });
 
-  if (!unit) {
-    return h('div', { className: 'xl-empty' },
-      data.units.length ? 'このテーマには単元がありません。「単元管理」タブで作成してください。'
-                        : '単元がありません。「単元管理」タブでテーマと単元を作成してください。');
+  if (!unit || picking) {
+    return h('div', { className: 'xl-app' },
+      h(UnitList, {
+        theme, themes: data.themes, units: unitsOfTheme, unitId: unit ? unit.id : '',
+        onPickTheme: id => setThemeId(id),
+        onPick: id => { setUnitId(id); setPicking(false); },
+        extra: data.units.length === 0
+          ? h('div', { className: 'xl-empty' }, '単元がありません。「単元管理」で作るか、ファイルから読み込んでください。')
+          : null,
+      })
+    );
   }
 
   const pool = unit ? unit.questions.map((q, i) => ({ q, no: i + 1 })).filter(item => {
@@ -1926,15 +2012,16 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progres
 
   const filterClass = 'bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white';
 
-  const themeSelect = h('select', {
-    title: 'テーマ', value: theme ? theme.id : '', onChange: e => setThemeId(e.target.value),
-    style: isPhone ? { width: '100%', minWidth: 0 } : { minWidth: '180px' },
-  }, data.themes.map(t => h('option', { key: t.id, value: t.id }, t.name)));
-
-  const unitSelect = h('select', {
-    title: '単元', value: unit ? unit.id : '', onChange: e => setUnitId(e.target.value),
-    style: isPhone ? { width: '100%', minWidth: 0 } : { minWidth: '200px' },
-  }, unitsOfTheme.map(u => h('option', { key: u.id, value: u.id }, `${u.name}（全${u.questions.length}問）`)));
+  // 単元は一覧から選ぶので、ここは「いま何を開いているか」と戻り口だけ
+  const unitBar = h('button', {
+    className: 'unit-back', title: '単元', onClick: () => setPicking(true),
+  },
+    h('span', { className: 'arrow' }, '‹'),
+    h('span', { className: 'who' },
+      h('span', { className: 'u' }, theme ? theme.name : ''),
+      h('span', { className: 'n' }, `${unit.name}（全${total}問）`)),
+    h('span', { className: 'go' }, '単元を選ぶ')
+  );
 
   const drawButton = h('button', {
     className: 'xl-btn',
@@ -1955,11 +2042,7 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progres
 
   // スマホは「テーマ・単元」で1行、「開始・終了・数・正解・抽選」で1行に詰める
   const phoneToolbar = h('div', { className: 'xl-toolbar', style: { padding: '6px 8px' } },
-    h('div', { style: { display: 'flex', gap: '6px' } },
-      h('div', { style: { flex: '1 1 0', minWidth: 0 } }, themeSelect),
-      h('div', { style: { flex: '1 1 0', minWidth: 0 } }, unitSelect)
-    ),
-    h('div', { style: { display: 'flex', gap: '4px', alignItems: 'flex-end', marginTop: '6px' } },
+    h('div', { style: { display: 'flex', gap: '4px', alignItems: 'flex-end' } },
       h('div', { style: { flex: '1 1 0', minWidth: 0 } },
         h('label', { className: 'xl-label' }, '開始'),
         numBox('開始No', rangeStart, e => setRangeStart(Math.max(1, Number(e.target.value) || 1)), { max: total || 1 })),
@@ -1983,17 +2066,12 @@ function DrawPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink, progres
   );
 
   return h('div', { className: 'xl-app' },
+    unitBar,
     isPhone ? phoneToolbar : h('div', { className: 'xl-toolbar flex flex-wrap items-end gap-4' },
       h('div', { className: 'xl-field-wide' },
         h('label', { className: 'xl-label' }, 'テーマ'),
         h('select', { title: 'テーマ', value: theme ? theme.id : '', onChange: e => setThemeId(e.target.value), style: { minWidth: '180px' } },
           data.themes.map(t => h('option', { key: t.id, value: t.id }, t.name))
-        )
-      ),
-      h('div', { className: 'xl-field-wide' },
-        h('label', { className: 'xl-label' }, '単元'),
-        h('select', { title: '単元', value: unit ? unit.id : '', onChange: e => setUnitId(e.target.value), style: { minWidth: '200px' } },
-          unitsOfTheme.map(u => h('option', { key: u.id, value: u.id }, `${u.name}（全${u.questions.length}問）`))
         )
       ),
       h('div', null,
@@ -2070,6 +2148,9 @@ function UnitsPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmThemeDelete, setConfirmThemeDelete] = useState(false);
   const [scrollSignal, setScrollSignal] = useState(0);
+  // 出題側と同じく、単元は一覧から選ぶ
+  const [picking, setPicking] = useState(false);
+  const importRef = useRef(null);
 
   function updateUnit(fn) {
     setData(d => ({ ...d, units: d.units.map(u => u.id === unit.id ? fn(u) : u) }));
@@ -2310,16 +2391,35 @@ function UnitsPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
   const photoCount = unit ? unit.questions.reduce((n, q) => n + photoIdsOf(data.photos, q.id).length, 0) : 0;
   const withUrl = unit ? unit.questions.filter(q => q.url).length : 0;
 
+  if (picking) {
+    return h('div', { className: 'xl-app' },
+      h(UnitList, {
+        theme, themes: data.themes, units: unitsOfTheme, unitId: unit ? unit.id : '',
+        onPickTheme: id => setThemeId(id),
+        onPick: id => { setUnitId(id); setPasteTarget(null); setConfirmDelete(false); setPicking(false); },
+        extra: h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '8px 4px 4px' } },
+          h('button', { className: 'xl-btn', onClick: () => { setPicking(false); setAdding(true); } }, '＋ 単元を追加'),
+          h('button', {
+            className: 'xl-btn xl-btn-sub',
+            onClick: () => { setPicking(false); if (importRef.current) importRef.current.scrollIntoView({ block: 'center' }); },
+          }, '📂 ファイルからまとめて追加')
+        ),
+      })
+    );
+  }
+
   return h('div', { className: 'xl-app' },
     themeRow,
+    h('button', {
+      className: 'unit-back', title: '単元', onClick: () => setPicking(true),
+    },
+      h('span', { className: 'arrow' }, '‹'),
+      h('span', { className: 'who' },
+        h('span', { className: 'u' }, theme ? theme.name : ''),
+        h('span', { className: 'n' }, `${unit.name}（${unit.questions.length}問）`)),
+      h('span', { className: 'go' }, '単元を選ぶ')
+    ),
     h('div', { className: 'xl-toolbar flex flex-wrap items-end gap-3' },
-      h('div', { className: 'xl-field-wide' },
-        h('label', { className: 'xl-label' }, '単元'),
-        h('select', {
-          title: '単元', value: unit ? unit.id : '', style: { minWidth: '200px' },
-          onChange: e => { setUnitId(e.target.value); setPasteTarget(null); setConfirmDelete(false); },
-        }, unitsOfTheme.map(u => h('option', { key: u.id, value: u.id }, `${u.name}（${u.questions.length}問）`)))
-      ),
       h('div', null,
         h('label', { className: 'xl-label' }, '単元名'),
         h('input', {
@@ -2409,7 +2509,7 @@ function UnitsPage({ data, setData, onShowPhoto, setMsg, sel, onOpenLink }) {
       )
     ),
 
-    h(TransferPanel, { data, setData, setMsg, sel }),
+    h('div', { ref: importRef }, h(TransferPanel, { data, setData, setMsg, sel })),
 
     h('div', { className: 'xl-status' },
       `${theme ? theme.name : '-'} ／ ${unit ? unit.name : '-'} ｜ ${unit ? unit.questions.length : 0}問 ｜ URLあり ${withUrl}問 ｜ 写真あり ${withPhoto}問（計${photoCount}枚）`)
