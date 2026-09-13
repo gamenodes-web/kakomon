@@ -185,6 +185,70 @@
   .ball .lab { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--ink); }
   .ball.full { border-color:var(--ok); box-shadow:0 0 0 3px var(--ok-soft); }
 
+  /* ── 問題ページを開いている画面 ─────────────────────────────────────────
+     読む面積をいちばん広く取り、よく使うものだけ下に大きく置く。 */
+  .viewer {
+    position:fixed; inset:0; z-index:55; display:flex; flex-direction:column; background:var(--bg);
+  }
+  .viewer-top {
+    flex:0 0 auto; display:flex; align-items:center; gap:8px;
+    padding:calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+    background:var(--surface); border-bottom:1px solid var(--line);
+  }
+  .viewer-top .who { flex:1 1 auto; min-width:0; }
+  .viewer-top .who .u {
+    display:block; font-size:11px; color:var(--muted); font-weight:700;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .viewer-top .who .n { display:block; font-size:16px; font-weight:800; color:var(--ink); }
+  .v-chip {
+    flex:0 0 auto; background:var(--sunken); border:1px solid var(--line); color:var(--ink);
+    border-radius:999px; padding:8px 12px; font-size:13px; font-weight:700; cursor:pointer;
+    font-variant-numeric:tabular-nums; font-family:inherit;
+  }
+  .v-chip.on { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+  .v-chip.off { color:var(--faint); }
+  .v-chip.hot { background:var(--danger); border-color:var(--danger); color:#fff; }
+  .viewer-pop {
+    flex:0 0 auto; display:flex; gap:6px; flex-wrap:wrap; padding:8px 12px;
+    background:var(--surface); border-bottom:1px solid var(--line);
+  }
+  .v-opt {
+    background:var(--sunken); border:1px solid var(--line); color:var(--ink); border-radius:999px;
+    padding:9px 14px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .v-opt.on { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .v-opt:disabled { color:var(--faint); }
+  .viewer-body { flex:1 1 auto; position:relative; background:#fff; }
+  .viewer-note {
+    position:absolute; left:16px; right:16px; top:38%; text-align:center;
+    font-size:14px; line-height:1.7; color:#333;
+  }
+  .viewer-bottom {
+    flex:0 0 auto; display:flex; align-items:center; gap:8px;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    background:var(--surface); border-top:1px solid var(--line);
+  }
+  .v-close {
+    flex:1 1 auto; background:var(--accent); color:var(--accent-ink); border:0; border-radius:var(--r-sm);
+    padding:14px 10px; font-size:16px; font-weight:800; cursor:pointer; font-family:inherit;
+  }
+  .v-ok {
+    flex:0 0 auto; background:var(--ok-soft); border:1px solid var(--ok-line); color:var(--ok);
+    border-radius:var(--r-sm); padding:14px 16px; font-size:16px; font-weight:800; cursor:pointer;
+    font-family:inherit; white-space:nowrap;
+  }
+  .v-cnt {
+    flex:0 0 auto; width:62px; text-align:center; font-size:16px; font-weight:700; font-family:inherit;
+    padding:12px 2px; border:1px solid var(--line); border-radius:var(--r-sm);
+    background:var(--sunken); color:var(--ink);
+  }
+  .v-out {
+    flex:0 0 auto; width:46px; height:46px; border-radius:var(--r-sm); background:var(--sunken);
+    border:1px solid var(--line); color:var(--muted); font-size:17px; text-decoration:none;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+
   /* ── カレンダー ─────────────────────────────────────────────────────── */
   .cal-table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; background:var(--surface); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
   .cal-table th { background:var(--surface); color:var(--muted); font-weight:700; font-size:11px; padding:8px; border-bottom:1px solid var(--line); text-align:left; }
@@ -888,12 +952,13 @@ function loadZoom() {
   return v >= ZOOM_MIN && v <= ZOOM_MAX ? v : 1;
 }
 
-function LinkViewer({ url, no, record, onSetCount, onClose }) {
+function LinkViewer({ url, no, unitName, record, onSetCount, onClose }) {
   const [loaded, setLoaded] = useState(false);
   const [slow, setSlow] = useState(false);
   const [limit, setLimit] = useState(() => loadLimit());   // 0 は「なし」
   const [left, setLeft] = useState(() => loadLimit());
   const [pickLimit, setPickLimit] = useState(false);
+  const [pickZoom, setPickZoom] = useState(false);
   const [zoom, setZoom] = useState(() => { try { return loadZoom(); } catch { return 1; } });
   // 枠の実寸。縮小したぶん中のページを広く描き、全体を縮めて収める。
   const boxRef = useRef(null);
@@ -951,68 +1016,50 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
     return () => clearInterval(id);
   }, [url, limit, onClose]);
 
-  return h('div', {
-    style: { zIndex: 55, display: 'flex', flexDirection: 'column' },
-    className: 'fixed inset-0 bg-gray-950',
-  },
-    h('div', {
-      style: { flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '8px 10px' },
-      className: 'bg-gray-900 border-b border-gray-700',
-    },
-      h('span', { className: 'text-xs text-gray-300', style: { fontWeight: 600 } }, `問題 ${no}`),
-      onSetCount && h('span', { className: 'text-xs text-gray-400' }, '正解'),
-      onSetCount && h('select', {
-        title: 'この問題の正解回数', 'data-sound': 'off', value: record.correct,
-        onChange: e => onSetCount('correct', Number(e.target.value)),
-        className: 'text-sm rounded bg-gray-800 border border-gray-600 text-white px-2 py-1',
-      }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
-      h('button', {
-        onClick: () => setPickLimit(v => !v),
-        title: '制限時間を変える',
-        className: `text-xs px-2 py-1.5 rounded-lg border tabular-nums ${limit
-          ? (left <= 10 ? 'bg-red-900 border-red-500 text-red-100' : 'bg-gray-800 border-gray-600 text-gray-100')
-          : 'bg-gray-800 border-gray-700 text-gray-500'}`,
-        style: { minWidth: '62px' },
-      }, limit ? `⏱ ${left}秒` : '⏱ なし'),
-      pickLimit && h('span', { style: { display: 'flex', gap: '4px', flexWrap: 'wrap' } },
-        LIMIT_CHOICES.map(v => h('button', {
-          key: v,
-          onClick: () => { setLimit(v); saveLimit(v); setPickLimit(false); },
-          className: `text-xs px-2 py-1.5 rounded-lg border ${v === limit
-            ? 'bg-blue-700 border-blue-500 text-white' : 'bg-gray-800 border-gray-600 text-gray-200'}`,
-        }, limitLabel(v)))),
-      h('span', { style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' } },
-        h('button', {
-          onClick: () => changeZoom(zoom - 0.1), disabled: zoom <= ZOOM_MIN, title: '表示を小さくする',
-          className: 'text-sm px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
-        }, '−'),
-        h('button', {
-          onClick: () => changeZoom(1), title: '表示の大きさを元に戻す',
-          className: 'text-xs px-2 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-300',
-          style: { minWidth: '52px' },
-        }, `${Math.round(zoom * 100)}%`),
-        h('button', {
-          onClick: () => changeZoom(zoom + 0.1), disabled: zoom >= ZOOM_MAX, title: '表示を大きくする',
-          className: 'text-sm px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
-        }, '＋')
+  const zoomPct = Math.round(zoom * 100);
+
+  // 画面いっぱいに出したいが、なぞって動かす箱の中は transform が掛かっていて
+  // fixed が効かない。body の直下に出して確実に全面を覆う。
+  return ReactDOM.createPortal(h('div', { className: 'viewer' },
+    // 上は「どの問題か」と残り時間だけ。読むための面積を最優先にする。
+    h('div', { className: 'viewer-top' },
+      h('div', { className: 'who' },
+        h('span', { className: 'u' }, unitName || ''),
+        h('span', { className: 'n' }, `${no}問目`)
       ),
-      h('a', {
-        href: url, target: '_blank', rel: 'noopener noreferrer',
-        className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
-      }, '新しいタブで開く ↗'),
       h('button', {
-        onClick: onClose, title: '閉じる（Esc）',
-        className: 'text-xs px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-100',
-      }, '閉じる ×')
+        className: 'v-chip' + (limit && left <= 10 ? ' hot' : '') + (limit ? '' : ' off'),
+        onClick: () => { setPickLimit(v => !v); setPickZoom(false); },
+        title: '制限時間を変える',
+      }, limit ? `⏱ ${left}秒` : '⏱ なし'),
+      h('button', {
+        className: 'v-chip' + (pickZoom ? ' on' : ''),
+        onClick: () => { setPickZoom(v => !v); setPickLimit(false); },
+        title: '文字の大きさを変える',
+      }, `🔍 ${zoomPct}%`)
+    ),
+
+    (pickLimit || pickZoom) && h('div', { className: 'viewer-pop' },
+      pickLimit && LIMIT_CHOICES.map(v => h('button', {
+        key: v, className: 'v-opt' + (v === limit ? ' on' : ''),
+        onClick: () => { setLimit(v); saveLimit(v); setPickLimit(false); },
+      }, limitLabel(v))),
+      pickZoom && h(React.Fragment, null,
+        h('button', { className: 'v-opt', onClick: () => changeZoom(zoom - 0.1), disabled: zoom <= ZOOM_MIN }, '− 小さく'),
+        // 割合を選んだら閉じる。−／＋は続けて押すので開いたままにする。
+        [0.5, 0.7, 0.85, 1, 1.25].map(v => h('button', {
+          key: v, className: 'v-opt' + (Math.abs(v - zoom) < 0.01 ? ' on' : ''),
+          onClick: () => { changeZoom(v); setPickZoom(false); },
+        }, `${Math.round(v * 100)}%`)),
+        h('button', { className: 'v-opt', onClick: () => changeZoom(zoom + 0.1), disabled: zoom >= ZOOM_MAX }, '＋ 大きく')
+      )
     ),
 
     h('div', {
       ref: boxRef,
+      className: 'viewer-body',
       // iOSでは枠を指定しても中身の大きさまで広がってしまうので、外側でスクロールさせる
-      style: {
-        flex: '1 1 auto', position: 'relative', background: '#fff',
-        overflow: 'auto', WebkitOverflowScrolling: 'touch',
-      },
+      style: { overflow: 'auto', WebkitOverflowScrolling: 'touch' },
     },
       size.w > 0 && h('iframe', {
         src: url, title: `問題 ${no}`, onLoad: () => setLoaded(true), scrolling: 'yes',
@@ -1022,14 +1069,27 @@ function LinkViewer({ url, no, record, onSetCount, onClose }) {
           transform: `scale(${zoom})`, transformOrigin: 'top left',
         },
       }),
-      !loaded && slow && h('div', {
-        className: 'text-sm text-gray-700',
-        style: {
-          position: 'absolute', left: 0, right: 0, top: '40%', textAlign: 'center', padding: '0 16px',
-        },
-      }, 'このページはアプリの中では表示できないようです。上の「新しいタブで開く」を使ってください。')
+      !loaded && slow && h('div', { className: 'viewer-note' },
+        'このページはアプリの中では表示できないようです。右下の ↗ を押すと、新しいタブで開けます。')
+    ),
+
+    // 下に、いちばん使うものを大きく並べる
+    h('div', { className: 'viewer-bottom' },
+      h('button', { className: 'v-close', onClick: onClose, title: '閉じる（Esc）' }, '✕ 閉じる'),
+      onSetCount && h('button', {
+        className: 'v-ok', 'data-sound': 'own',
+        onClick: e => { play('correct'); burstFrom(e.currentTarget); onSetCount('correct', Math.min(COUNT_MAX, record.correct + 1)); },
+        title: '正解を1つ足す',
+      }, '✓ 正解'),
+      onSetCount && h('select', {
+        className: 'v-cnt', title: 'この問題の正解回数', 'data-sound': 'off', value: record.correct,
+        onChange: e => onSetCount('correct', Number(e.target.value)),
+      }, COUNT_OPTIONS.map(n => h('option', { key: n, value: n }, n))),
+      h('a', {
+        className: 'v-out', href: url, target: '_blank', rel: 'noopener noreferrer', title: '別のタブで開く',
+      }, '↗')
     )
-  );
+  ), document.body);
 }
 
 // ── 写真のトリミング（拡大表示の中で使う）─────────────────────────────────────
@@ -2629,6 +2689,7 @@ function PracticeHub({ data, setData, onShowPhoto, tab, setTab }) {
       return h(LinkViewer, {
         url: u.questions[i].url,
         no: i + 1,
+        unitName: u.name,
         record: data.records[linkView.qid] || { correct: 0, wrong: 0 },
         onSetCount: (field, value) => setCountFor(linkView.qid, field, value, setData),
         onClose: () => setLinkView(null),
