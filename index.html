@@ -249,6 +249,23 @@
     display:inline-flex; align-items:center; justify-content:center;
   }
 
+  /* ── 設定画面 ───────────────────────────────────────────────────────── */
+  .set-body-scroll { flex:1 1 auto; overflow:auto; background:var(--bg); padding:12px; }
+  .set-row { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:14px; margin-bottom:10px; }
+  .set-head { margin-bottom:10px; }
+  .set-title { display:block; font-size:15px; font-weight:800; color:var(--ink); }
+  .set-note { display:block; font-size:12px; color:var(--muted); margin-top:3px; line-height:1.6; }
+  .set-chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .set-slider { display:flex; align-items:center; gap:10px; margin-top:12px; }
+  .set-slider.off { opacity:.45; }
+  .set-slider span { font-size:12px; color:var(--muted); font-weight:700; }
+  .set-slider input[type=range] { flex:1 1 auto; min-width:0; accent-color:var(--accent); height:28px; }
+  .set-slider input[type=number] {
+    font-size:16px; font-weight:700; padding:9px 8px; border-radius:var(--r-xs);
+    border:1px solid var(--line); background:var(--sunken); color:var(--ink); font-family:inherit;
+  }
+  .set-foot { text-align:center; font-size:11px; color:var(--faint); padding:8px 0 24px; }
+
   /* ── カレンダー ─────────────────────────────────────────────────────── */
   .cal-table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; background:var(--surface); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
   .cal-table th { background:var(--surface); color:var(--muted); font-weight:700; font-size:11px; padding:8px; border-bottom:1px solid var(--line); text-align:left; }
@@ -348,6 +365,8 @@ function saveDraw(state) {
 // ── 音 ───────────────────────────────────────────────────────────────────────
 // 音のファイルは持たず、その場で短い音を作って鳴らす（読み込みが要らないため）。
 const SOUND_KEY = 'feExamSound';
+const VOLUME_KEY = 'feExamVolume';
+const DEFAULT_VOLUME = 0.7;
 let audioCtx = null;
 
 function soundOn() {
@@ -356,6 +375,22 @@ function soundOn() {
 
 function setSoundOn(on) {
   try { localStorage.setItem(SOUND_KEY, on ? 'on' : 'off'); } catch {}
+}
+
+// 0〜1。端末の音量とは別に、アプリの中での大きさを決める
+function loadVolume() {
+  try {
+    // 未設定のとき getItem は null を返す。Number(null) は 0 なので、
+    // そのまま通すと「音量ゼロ」になってしまう。先に有無を見る。
+    const raw = localStorage.getItem(VOLUME_KEY);
+    if (raw === null || raw === '') return DEFAULT_VOLUME;
+    const v = Number(raw);
+    return Number.isFinite(v) && v >= 0 && v <= 1 ? v : DEFAULT_VOLUME;
+  } catch { return DEFAULT_VOLUME; }
+}
+
+function saveVolume(v) {
+  try { localStorage.setItem(VOLUME_KEY, String(v)); } catch {}
 }
 
 // 「かちゃっ」は音程のある音ではなく短い雑音で作る。板をはじいたような
@@ -373,6 +408,7 @@ function noiseBuffer(ctx) {
 
 // 雑音をひとつ鳴らす（at 秒後に dur 秒、hz あたりの高さ、vol の大きさ）
 function clickAt(ctx, at, dur, hz, vol) {
+  vol *= loadVolume();
   const src = ctx.createBufferSource();
   src.buffer = noiseBuffer(ctx);
   const band = ctx.createBiquadFilter();
@@ -391,6 +427,7 @@ function clickAt(ctx, at, dur, hz, vol) {
 
 // 音程のある音。正解と時間切れにだけ使う
 function toneAt(ctx, at, dur, hz, vol) {
+  vol *= loadVolume();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   const now = ctx.currentTime + at;
@@ -404,16 +441,17 @@ function toneAt(ctx, at, dur, hz, vol) {
   osc.stop(now + dur + 0.02);
 }
 
+// ここは音量つまみが 1.0 のときの大きさ。既定の 0.7 で普通に聞こえるように取る。
 const SOUNDS = {
   // ボタンやプルダウンをさわったとき。ひとつだけ、ごく短く
-  click:   ctx => clickAt(ctx, 0, .035, 2400, .05),
+  click:   ctx => clickAt(ctx, 0, .04, 2400, .30),
   // 抽選はサイコロを振った感じに、かちゃかちゃと重ねる
-  draw:    ctx => [0, .055, .105, .15].forEach((at, i) => clickAt(ctx, at, .04, 1800 + i * 260, .06)),
+  draw:    ctx => [0, .055, .105, .15].forEach((at, i) => clickAt(ctx, at, .045, 1800 + i * 260, .34)),
   // 問題を開くときは、少し低いかちゃっ
-  open:    ctx => clickAt(ctx, 0, .04, 1500, .055),
-  // 正解だけは音程を付ける。うるさくならないよう小さく短く
-  correct: ctx => { clickAt(ctx, 0, .03, 2600, .04); toneAt(ctx, .02, .1, 880, .07); toneAt(ctx, .09, .14, 1319, .06); },
-  timeup:  ctx => { toneAt(ctx, 0, .12, 420, .07); toneAt(ctx, .11, .18, 300, .06); },
+  open:    ctx => clickAt(ctx, 0, .045, 1500, .32),
+  // 正解だけは音程を付ける
+  correct: ctx => { clickAt(ctx, 0, .03, 2600, .22); toneAt(ctx, .02, .1, 880, .34); toneAt(ctx, .09, .16, 1319, .30); },
+  timeup:  ctx => { toneAt(ctx, 0, .12, 420, .34); toneAt(ctx, .11, .2, 300, .30); },
 };
 
 function play(kind) {
@@ -427,24 +465,28 @@ function play(kind) {
   } catch {}
 }
 
-// ── 見た目（白／黒）───────────────────────────────────────────────────────
+// ── 見た目（白／黒／端末に合わせる）─────────────────────────────────────────
 const THEME_KEY = 'feExamTheme';
 
-function loadTheme() {
+// 保存しているのは light / dark / auto の3つ
+function loadThemeMode() {
   try {
     const v = localStorage.getItem(THEME_KEY);
-    if (v === 'light' || v === 'dark') return v;
+    if (v === 'light' || v === 'dark' || v === 'auto') return v;
   } catch {}
-  // はじめは端末の設定に合わせる
-  try {
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
-  } catch {}
-  return 'light';
+  return 'auto';
 }
 
-function applyTheme(v) {
-  document.documentElement.setAttribute('data-theme', v);
-  try { localStorage.setItem(THEME_KEY, v); } catch {}
+function systemDark() {
+  try { return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
+  catch { return false; }
+}
+
+const resolveTheme = mode => (mode === 'auto' ? (systemDark() ? 'dark' : 'light') : mode);
+
+function applyTheme(mode) {
+  document.documentElement.setAttribute('data-theme', resolveTheme(mode));
+  try { localStorage.setItem(THEME_KEY, mode); } catch {}
 }
 
 // ── 1問あたりの制限時間 ──────────────────────────────────────────────────────
@@ -1088,6 +1130,101 @@ function LinkViewer({ url, no, unitName, record, onSetCount, onClose }) {
       h('a', {
         className: 'v-out', href: url, target: '_blank', rel: 'noopener noreferrer', title: '別のタブで開く',
       }, '↗')
+    )
+  ), document.body);
+}
+
+// ── 設定画面 ────────────────────────────────────────────────────────────────
+// あちこちに散っていたつまみを1か所に集める。開くたびに今の値を読み直す。
+function SettingsSheet({ progress, setProgress, themeMode, setThemeMode, onClose }) {
+  const [sound, setSound] = useState(() => soundOn());
+  const [volume, setVolume] = useState(() => loadVolume());
+  const [limit, setLimit] = useState(() => loadLimit());
+  const [zoom, setZoom] = useState(() => { try { return loadZoom(); } catch { return 1; } });
+  const [goal, setGoal] = useState(() => String(progress.goal));
+  const preview = useRef(null);
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); clearTimeout(preview.current); };
+  }, [onClose]);
+
+  // つまみを動かしている間ずっと鳴ると耳障りなので、少し置いてから1回だけ鳴らす
+  function tryVolume() {
+    clearTimeout(preview.current);
+    preview.current = setTimeout(() => play('correct'), 220);
+  }
+
+  const row = (title, note, body) => h('div', { className: 'set-row' },
+    h('div', { className: 'set-head' },
+      h('span', { className: 'set-title' }, title),
+      note && h('span', { className: 'set-note' }, note)),
+    h('div', { className: 'set-body' }, body));
+
+  const chips = (list, now, onPick) => h('div', { className: 'set-chips' },
+    list.map(([v, label]) => h('button', {
+      key: String(v), className: 'v-opt' + (v === now ? ' on' : ''), onClick: () => onPick(v),
+    }, label)));
+
+  return ReactDOM.createPortal(h('div', { className: 'viewer' },
+    h('div', { className: 'viewer-top' },
+      h('div', { className: 'who' }, h('span', { className: 'n' }, '設定')),
+      h('button', { className: 'v-chip', onClick: onClose, title: '閉じる（Esc）' }, '✕')
+    ),
+
+    h('div', { className: 'set-body-scroll' },
+      row('見た目', '端末に合わせると、スマホの設定に従います',
+        chips([['light', '☀️ 白'], ['dark', '🌙 黒'], ['auto', '端末に合わせる']], themeMode, v => setThemeMode(v))),
+
+      row('音', sound ? `大きさ ${Math.round(volume * 100)}%` : '切っています',
+        h('div', null,
+          chips([[true, '🔊 鳴らす'], [false, '🔇 消す']], sound,
+            v => { setSound(v); setSoundOn(v); if (v) play('correct'); }),
+          h('div', { className: 'set-slider' + (sound ? '' : ' off') },
+            h('span', null, '小'),
+            h('input', {
+              type: 'range', min: 0, max: 100, step: 5, value: Math.round(volume * 100),
+              disabled: !sound, title: '音の大きさ',
+              onChange: e => { const v = Number(e.target.value) / 100; setVolume(v); saveVolume(v); tryVolume(); },
+            }),
+            h('span', null, '大'),
+            h('button', {
+              className: 'v-opt', disabled: !sound, onClick: () => play('correct'), title: '音を試す',
+            }, '試す')
+          ))),
+
+      row('1問あたりの制限時間', '時間切れになると、選ぶ画面へ自動で戻ります',
+        chips(LIMIT_CHOICES.map(v => [v, limitLabel(v)]), limit,
+          v => { setLimit(v); saveLimit(v); })),
+
+      row('1日の目標', '出題画面の球が、この数に対して溜まります',
+        h('div', { className: 'set-slider' },
+          h('input', {
+            type: 'number', min: 1, max: 999, value: goal, title: '1日の目標',
+            style: { width: '90px', textAlign: 'center' },
+            onChange: e => setGoal(e.target.value),
+            onBlur: () => {
+              const n = Math.max(1, Math.min(999, Number(goal) || 1));
+              setGoal(String(n));
+              setProgress(p => { const next = { ...p, goal: n }; saveProgress(next); return next; });
+            },
+          }),
+          h('span', null, '問'))),
+
+      row('問題ページの文字の大きさ', '問題を開いたときの表示倍率',
+        chips([[0.5, '50%'], [0.7, '70%'], [0.85, '85%'], [1, '100%'], [1.25, '125%']], zoom,
+          v => { setZoom(v); try { localStorage.setItem(ZOOM_KEY, String(v)); } catch {} })),
+
+      row('データの持ち運び', '書き出し・読み込みは「単元管理」の下にあります',
+        h('span', { className: 'set-note' },
+          'ときどき書き出して保存しておくと、端末を変えても続きから使えます。')),
+
+      h('div', { className: 'set-foot' }, '過去問演習アプリ')
+    ),
+
+    h('div', { className: 'viewer-bottom' },
+      h('button', { className: 'v-close', onClick: onClose }, '✕ 閉じる')
     )
   ), document.body);
 }
@@ -2619,14 +2756,10 @@ function TransferPanel({ data, setData, setMsg, sel }) {
 }
 
 // ── 過去問演習（出題／単元管理）────────────────────────────────────────────────
-function PracticeHub({ data, setData, onShowPhoto, tab, setTab }) {
+function PracticeHub({ data, setData, onShowPhoto, tab, setTab, progress, setProgress, markQuestionDone }) {
   const [msg, setMsg] = useState('');
   const [linkView, setLinkView] = useState(null); // アプリの中で開いている問題
-  const [progress, setProgress] = useState(() => loadProgress());
   const isPhone = useIsPhone();
-
-  // 「手をつけた問題」を今日の分に数える（同じ問題は1回だけ）
-  const markQuestionDone = qid => setProgress(p => markDone(p, qid));
   // 前に開いていた単元をそのまま開き直す（毎回選び直さなくて済むように）
   const restored = useRef(loadDraw());
   // テーマと単元の選択はタブをまたいで保つ
@@ -2938,9 +3071,20 @@ function App() {
   const isPhone = useIsPhone();
   // 画面は 出題 → 単元管理 → カレンダー の並び。なぞって前後に移る。
   const [tab, setTab] = useState('draw');
-  const [sound, setSound] = useState(() => soundOn());
-  const [theme, setTheme] = useState(() => loadTheme());
-  useEffect(() => { applyTheme(theme); }, [theme]);
+  const [themeMode, setThemeMode] = useState(() => loadThemeMode());
+  const [settings, setSettings] = useState(false);
+  const [progress, setProgress] = useState(() => loadProgress());
+  const markQuestionDone = qid => setProgress(p => markDone(p, qid));
+
+  useEffect(() => {
+    applyTheme(themeMode);
+    if (themeMode !== 'auto' || !window.matchMedia) return undefined;
+    // 端末に合わせる設定のときは、端末側が切り替わったら追いかける
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => applyTheme('auto');
+    mq.addEventListener ? mq.addEventListener('change', onChange) : mq.addListener(onChange);
+    return () => { mq.removeEventListener ? mq.removeEventListener('change', onChange) : mq.removeListener(onChange); };
+  }, [themeMode]);
   const mode = tab === 'calendar' ? 'calendar' : 'practice';
   const setMode = id => setTab(id === 'calendar' ? 'calendar' : 'draw');
   const index = Math.max(0, SCREENS.findIndex(sc => sc.id === tab));
@@ -3025,7 +3169,7 @@ function App() {
   function renderScreen(id) {
     if (id === 'calendar') return h(CalendarPage, { data, setData });
     return h(PracticeHub, {
-      data, setData, tab: id, setTab,
+      data, setData, tab: id, setTab, progress, setProgress, markQuestionDone,
       onShowPhoto: (qid, i) => setPhotoView({ qid, index: i || 0 }),
     });
   }
@@ -3133,15 +3277,9 @@ function App() {
             }, t.label)),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' } },
           h('button', {
-            onClick: () => setTheme(v => (v === 'dark' ? 'light' : 'dark')),
-            title: theme === 'dark' ? '白い画面にする' : '黒い画面にする',
+            onClick: () => setSettings(true), title: '設定',
             className: 'icon-btn',
-          }, theme === 'dark' ? '☀️' : '🌙'),
-          h('button', {
-            onClick: () => { const v = !sound; setSound(v); setSoundOn(v); if (v) play('open'); },
-            title: sound ? '音を消す' : '音を鳴らす',
-            className: `icon-btn${sound ? ' on' : ''}`,
-          }, sound ? '🔊' : '🔇'),
+          }, '⚙'),
           h('button', {
             onClick: undo, disabled: history.undo === 0, title: '元に戻す（Ctrl+Z）',
             className: 'icon-btn', style: isPhone ? {} : { width: 'auto', padding: '0 12px', fontSize: '12px' },
@@ -3227,6 +3365,11 @@ function App() {
         className: sc.id === tab ? 'on' : '',
         onClick: () => setTab(sc.id),
       }, h('b', null, SCREEN_ICONS[sc.id]), sc.label))),
+
+    settings && h(SettingsSheet, {
+      progress, setProgress, themeMode, setThemeMode,
+      onClose: () => setSettings(false),
+    }),
 
     h(PomodoroTimer)
   );
